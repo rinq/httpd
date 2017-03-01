@@ -8,7 +8,7 @@
 
 Rinq is a cross-language command bus and distributed ephemeral data store.
 
-The Rinq HTTP daemon makes Rinq services available via HTTP/2 and WebSockets. 
+The Rinq HTTP daemon makes Rinq services available via HTTP and WebSockets.
 
 ## Building and testing
 
