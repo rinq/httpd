@@ -1,0 +1,13 @@
+package: github.com/rinq/httpd
+import:
+- package: github.com/onsi/ginkgo
+  version: master
+- package: github.com/onsi/gomega
+  version: master
+- package: github.com/rinq/rinq-go
+  version: master
+- package: github.com/gorilla/websocket
+  version: ^1.1.0
+- package: github.com/golang/gddo
+  subpackages:
+  - httputil/header

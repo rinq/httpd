@@ -1,0 +1,41 @@
+hash: 174c859a2888fd398e7c1cc00bdcfa2fb85d374688390f94ed9872f1b4004d5d
+updated: 2017-03-01T19:30:30.951265979+10:00
+imports:
+- name: github.com/golang/gddo
+  version: 13f8d77bb721c2cd340cc84e1c569629dab9abfd
+  subpackages:
+  - httputil/header
+- name: github.com/gorilla/websocket
+  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+- name: github.com/hashicorp/go-version
+  version: 03c5bf6be031b6dd45afec16b1cf94fc8938bc77
+- name: github.com/onsi/ginkgo
+  version: bb93381d543b0e5725244abe752214a110791d01
+- name: github.com/onsi/gomega
+  version: c463cd2a8578290d4be7a25cba69de81cf35785e
+- name: github.com/rinq/rinq-go
+  version: e387ce5dc1e03bee2ddd9749ba60b73f71688013
+  subpackages:
+  - src/rinq
+  - src/rinq/amqp
+  - src/rinq/amqp/internal/amqputil
+  - src/rinq/amqp/internal/commandamqp
+  - src/rinq/amqp/internal/notifyamqp
+  - src/rinq/internal/attrmeta
+  - src/rinq/internal/bufferpool
+  - src/rinq/internal/command
+  - src/rinq/internal/localsession
+  - src/rinq/internal/notify
+  - src/rinq/internal/reflectutil
+  - src/rinq/internal/remotesession
+  - src/rinq/internal/revision
+  - src/rinq/internal/service
+  - src/rinq/internal/syncutil
+  - src/rinq/internal/trace
+- name: github.com/streadway/amqp
+  version: d75c3a341ff43309ad0cb69ac8bdbd1d8772775f
+- name: github.com/ugorji/go
+  version: c88ee250d0221a57af388746f5cf03768c21d6e2
+  subpackages:
+  - codec
+testImports: []
