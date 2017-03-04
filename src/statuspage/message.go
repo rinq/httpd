@@ -28,7 +28,7 @@ func Message(c int) string {
 	case http.StatusUpgradeRequired:
 		return "Maybe you're trying to access a WebSocket server?"
 	case http.StatusTooManyRequests:
-		return "Your request has been rate-limited, please descrease the number of requests."
+		return "Your request has been rate-limited, please decrease the number of requests."
 	case http.StatusRequestHeaderFieldsTooLarge:
 		return "Your browser has sent a request header that is too large to process."
 	case http.StatusUnavailableForLegalReasons:

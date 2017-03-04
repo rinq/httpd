@@ -49,11 +49,12 @@ func useHTML(request *http.Request) bool {
 	textQ := 0.0
 
 	for _, spec := range header.ParseAccept(request.Header, "Accept") {
-		if spec.Value == "text/html" || spec.Value == "application/xhtml+xml" {
+		switch spec.Value {
+		case "text/html", "application/xhtml+xml":
 			if spec.Q > htmlQ {
 				htmlQ = spec.Q
 			}
-		} else if spec.Value == "text/plain" || spec.Value == "*.*" {
+		case "text/plain", "text/*", "*/*":
 			if spec.Q > textQ {
 				textQ = spec.Q
 			}
