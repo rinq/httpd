@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// NewOriginChecker returns a function that returns true if r's Origin header
+// newOriginChecker returns a function that returns true if r's Origin header
 // matches the pattern p.
-func NewOriginChecker(p string) func(r *http.Request) bool {
+func newOriginChecker(p string) func(r *http.Request) bool {
 	p = strings.ToLower(p)
 
 	// fallback to Gorilla's default, which matches against the Host header

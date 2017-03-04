@@ -1,4 +1,4 @@
-package websock_test
+package websock
 
 import (
 	"net/http"
@@ -6,10 +6,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/websock"
 )
 
-var _ = Describe("NewOriginChecker", func() {
+var _ = Describe("newOriginChecker", func() {
 	var (
 		withOrigin    http.Request
 		withoutOrigin http.Request
@@ -21,18 +20,18 @@ var _ = Describe("NewOriginChecker", func() {
 		withOrigin.Header.Add("Origin", "https://host.domain.tld")
 
 		invalidOrigin.Header = http.Header{}
-		invalidOrigin.Header.Add("Origin", ":")
+		invalidOrigin.Header.Add("Origin", ":") // invalid scheme
 	})
 
 	It("returns nil if the pattern is empty", func() {
-		fn := NewOriginChecker("")
+		fn := newOriginChecker("")
 		Expect(fn).To(BeNil())
 	})
 
 	DescribeTable(
 		"returns a checker that returns true for matches",
 		func(p string, r *http.Request) {
-			fn := NewOriginChecker(p)
+			fn := newOriginChecker(p)
 			Expect(fn(r)).To(BeTrue())
 		},
 		Entry("any", "*", &withOrigin),
@@ -48,7 +47,7 @@ var _ = Describe("NewOriginChecker", func() {
 	DescribeTable(
 		"returns a checker that returns false for non-matches",
 		func(p string, r *http.Request) {
-			fn := NewOriginChecker(p)
+			fn := newOriginChecker(p)
 			Expect(fn(r)).To(BeFalse())
 		},
 		Entry("suffix", "*.other", &withOrigin),
