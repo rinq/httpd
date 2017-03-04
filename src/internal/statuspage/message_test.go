@@ -2,9 +2,8 @@ package statuspage_test
 
 import (
 	. "github.com/onsi/ginkgo"
-	. "github.com/rinq/httpd/src/statuspage"
-	// . "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/rinq/httpd/src/internal/statuspage"
 )
 
 var _ = Describe("Message", func() {

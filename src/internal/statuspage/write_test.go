@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/statuspage"
+	. "github.com/rinq/httpd/src/internal/statuspage"
 )
 
 var _ = Describe("Write", func() {
