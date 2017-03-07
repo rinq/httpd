@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-// SessionCreate is an incoming message request that a new session is created.
+// SessionCreate is an incoming message requesting that a new session be created.
 type SessionCreate struct {
 	Session uint16
 }
@@ -40,10 +40,14 @@ func (m *SessionDestroy) Read(r io.Reader, e Encoding) error {
 }
 
 func (m *SessionDestroy) Write(w io.Writer, e Encoding) (err error) {
-	err = binary.Write(w, binary.BigEndian, SessionDestroyType)
+	err = binary.Write(w, binary.BigEndian, sessionDestroyType)
 
 	if err == nil {
 		err = binary.Write(w, binary.BigEndian, m.Session)
+	}
+
+	if err == nil {
+		err = binary.Write(w, binary.BigEndian, uint16(0)) // empty header
 	}
 
 	return

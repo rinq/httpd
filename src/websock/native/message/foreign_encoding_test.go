@@ -11,17 +11,22 @@ import (
 
 var _ = Describe("foreignEncoding / JSONEncoding", func() {
 	var (
-		subject      Encoding
-		headerBytes  []byte
-		headerValue  testHeader
+		subject Encoding
+
+		headerBytes []byte
+		headerValue testHeader
+
 		payloadBytes []byte
 		payloadValue testPayload
 	)
 
 	BeforeEach(func() {
 		subject = JSONEncoding
-		headerBytes = []byte(`[123,"abc"]`)
+
+		headerBytes = []byte{0, 11} // size = 11 bytes}
+		headerBytes = append(headerBytes, `[123,"abc"]`...)
 		headerValue = testHeader{123, "abc"}
+
 		payloadBytes = []byte(`{"A":456,"B":"def"}`)
 		payloadValue = testPayload{456, "def"}
 	})
@@ -40,19 +45,18 @@ var _ = Describe("foreignEncoding / JSONEncoding", func() {
 		It("decodes the header from an array", func() {
 			r := bytes.NewReader(headerBytes)
 			var h testHeader
-			err := subject.DecodeHeader(r, 10000, &h)
+			err := subject.DecodeHeader(r, &h)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(h).To(Equal(headerValue))
 		})
 
-		It("only reads up to n bytes", func() {
+		It("does not read past the header length", func() {
 			r := bytes.NewBuffer(headerBytes)
-			n := r.Len()
 			r.Write([]byte{10, 20, 30}) // garbage
 
 			var h testHeader
-			err := subject.DecodeHeader(r, uint16(n), &h)
+			err := subject.DecodeHeader(r, &h)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(h).To(Equal(headerValue))

@@ -11,17 +11,24 @@ import (
 
 var _ = Describe("nativeEncoding / CBOREncoding", func() {
 	var (
-		subject      Encoding
-		headerBytes  []byte
-		headerValue  testHeader
+		subject Encoding
+
+		headerBytes []byte
+		headerValue testHeader
+
 		payloadBytes []byte
 		payloadValue testPayload
 	)
 
 	BeforeEach(func() {
 		subject = CBOREncoding
-		headerBytes = []byte{130, 24, 123, 99, 97, 98, 99}
+
+		headerBytes = []byte{
+			0, 7, // size = 7 bytes
+			130, 24, 123, 99, 97, 98, 99,
+		}
 		headerValue = testHeader{123, "abc"}
+
 		payloadBytes = []byte{162, 97, 65, 25, 1, 200, 97, 66, 99, 100, 101, 102}
 		payloadValue = testPayload{456, "def"}
 	})
@@ -40,19 +47,18 @@ var _ = Describe("nativeEncoding / CBOREncoding", func() {
 		It("decodes the header from an array", func() {
 			r := bytes.NewReader(headerBytes)
 			var h testHeader
-			err := subject.DecodeHeader(r, 10000, &h)
+			err := subject.DecodeHeader(r, &h)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(h).To(Equal(headerValue))
 		})
 
-		It("only reads up to n bytes", func() {
+		It("does not read past the header length", func() {
 			r := bytes.NewBuffer(headerBytes)
-			n := r.Len()
 			r.Write([]byte{10, 20, 30}) // garbage
 
 			var h testHeader
-			err := subject.DecodeHeader(r, uint16(n), &h)
+			err := subject.DecodeHeader(r, &h)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(h).To(Equal(headerValue))
