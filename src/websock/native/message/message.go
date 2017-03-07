@@ -4,8 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-
-	"github.com/ugorji/go/codec"
 )
 
 // Incoming is an interface for messages that are received from the browser.
@@ -15,17 +13,17 @@ type Incoming interface {
 
 	// Read decodes the next message from r into this message.
 	// It is assumed that the message type has already been read from r.
-	Read(r io.Reader, d *codec.Decoder) error
+	Read(r io.Reader, e Encoding) error
 }
 
 // Outgoing is an interface for messages that are sent to the browser.
 type Outgoing interface {
 	// Write encodes this message to w, including the message type.
-	Write(w io.Writer, e *codec.Encoder) error
+	Write(w io.Writer, e Encoding) error
 }
 
 // Read decodes the next message from r.
-func Read(r io.Reader, d *codec.Decoder) (msg Incoming, err error) {
+func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 	var mt uint16
 	err = binary.Read(r, binary.BigEndian, &mt)
 	if err != nil {
@@ -42,6 +40,6 @@ func Read(r io.Reader, d *codec.Decoder) (msg Incoming, err error) {
 		return
 	}
 
-	err = msg.Read(r, d)
+	err = msg.Read(r, e)
 	return
 }

@@ -6,8 +6,8 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rinq/httpd/src/websock"
+	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
-	"github.com/ugorji/go/codec"
 )
 
 const protocolPrefix = "ring-1.0+"
@@ -32,14 +32,11 @@ func (p *protocol) Names() []string {
 }
 
 func (p *protocol) Handle(s *websocket.Conn) {
-	enc, dec := p.codec(s)
-
 	con := newConnection(
 		p.peer,
 		p.ping,
 		s,
-		enc,
-		dec,
+		p.encoding(s),
 	)
 
 	if err := con.Run(); err != nil {
@@ -47,22 +44,13 @@ func (p *protocol) Handle(s *websocket.Conn) {
 	}
 }
 
-func (p *protocol) codec(s *websocket.Conn) (enc *codec.Encoder, dec *codec.Decoder) {
-	var handle codec.Handle
-
+func (p *protocol) encoding(s *websocket.Conn) message.Encoding {
 	switch s.Subprotocol() {
 	case protocolPrefix + "cbor":
-		handle = &cborHandle
+		return message.CBOREncoding
 	case protocolPrefix + "json":
-		handle = &jsonHandle
+		return message.JSONEncoding
 	default:
 		panic("selected sub-protocol is not supported")
 	}
-
-	enc = codec.NewEncoder(nil, handle)
-	dec = codec.NewDecoder(nil, handle)
-	return
 }
-
-var cborHandle codec.CborHandle
-var jsonHandle codec.JsonHandle

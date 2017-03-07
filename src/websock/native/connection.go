@@ -7,15 +7,13 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
-	"github.com/ugorji/go/codec"
 )
 
 type connection struct {
-	peer    rinq.Peer
-	ping    time.Duration
-	socket  *websocket.Conn
-	encoder *codec.Encoder
-	decoder *codec.Decoder
+	peer     rinq.Peer
+	ping     time.Duration
+	socket   *websocket.Conn
+	encoding message.Encoding
 
 	incoming  chan message.Incoming
 	outgoing  chan message.Outgoing
@@ -30,15 +28,13 @@ func newConnection(
 	peer rinq.Peer,
 	ping time.Duration,
 	socket *websocket.Conn,
-	encoder *codec.Encoder,
-	decoder *codec.Decoder,
+	encoding message.Encoding,
 ) *connection {
 	return &connection{
-		peer:    peer,
-		ping:    ping,
-		socket:  socket,
-		encoder: encoder,
-		decoder: decoder,
+		peer:     peer,
+		ping:     ping,
+		socket:   socket,
+		encoding: encoding,
 
 		incoming:  make(chan message.Incoming),
 		outgoing:  make(chan message.Outgoing),
@@ -106,7 +102,7 @@ func (c *connection) read() {
 			return
 		}
 
-		msg, err := message.Read(r, c.decoder)
+		msg, err := message.Read(r, c.encoding)
 		if err != nil {
 			c.stop(err)
 			return
@@ -171,5 +167,5 @@ func (c *connection) send(msg message.Outgoing) error {
 		return err
 	}
 
-	return msg.Write(w, c.encoder)
+	return msg.Write(w, c.encoding)
 }

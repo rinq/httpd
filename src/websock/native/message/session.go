@@ -3,8 +3,6 @@ package message
 import (
 	"encoding/binary"
 	"io"
-
-	"github.com/ugorji/go/codec"
 )
 
 // SessionCreate is an incoming message request that a new session is created.
@@ -17,7 +15,7 @@ func (m *SessionCreate) Accept(v Visitor) error {
 	return v.VisitSessionCreate(m)
 }
 
-func (m *SessionCreate) Read(r io.Reader, _ *codec.Decoder) error {
+func (m *SessionCreate) Read(r io.Reader, e Encoding) error {
 	return binary.Read(r, binary.BigEndian, &m.Session)
 }
 
@@ -37,11 +35,11 @@ func (m *SessionDestroy) Accept(v Visitor) error {
 	return v.VisitSessionDestroy(m)
 }
 
-func (m *SessionDestroy) Read(r io.Reader, _ *codec.Decoder) error {
+func (m *SessionDestroy) Read(r io.Reader, e Encoding) error {
 	return binary.Read(r, binary.BigEndian, &m.Session)
 }
 
-func (m *SessionDestroy) Write(w io.Writer, _ *codec.Encoder) error {
+func (m *SessionDestroy) Write(w io.Writer, e Encoding) error {
 	if err := binary.Write(w, binary.BigEndian, SessionDestroyType); err != nil {
 		return err
 	}
