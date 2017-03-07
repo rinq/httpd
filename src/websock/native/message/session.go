@@ -39,10 +39,12 @@ func (m *SessionDestroy) Read(r io.Reader, e Encoding) error {
 	return binary.Read(r, binary.BigEndian, &m.Session)
 }
 
-func (m *SessionDestroy) Write(w io.Writer, e Encoding) error {
-	if err := binary.Write(w, binary.BigEndian, SessionDestroyType); err != nil {
-		return err
+func (m *SessionDestroy) Write(w io.Writer, e Encoding) (err error) {
+	err = binary.Write(w, binary.BigEndian, SessionDestroyType)
+
+	if err == nil {
+		err = binary.Write(w, binary.BigEndian, m.Session)
 	}
 
-	return binary.Write(w, binary.BigEndian, m.Session)
+	return
 }

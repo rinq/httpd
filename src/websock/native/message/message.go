@@ -25,21 +25,22 @@ type Outgoing interface {
 // Read decodes the next message from r.
 func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 	var mt uint16
+
 	err = binary.Read(r, binary.BigEndian, &mt)
-	if err != nil {
-		return
+
+	if err == nil {
+		switch mt {
+		case SessionCreateType:
+			msg = &SessionCreate{}
+		case SessionDestroyType:
+			msg = &SessionDestroy{}
+		default:
+			err = errors.New("unrecognised message type")
+			return
+		}
+
+		err = msg.Read(r, e)
 	}
 
-	switch mt {
-	case SessionCreateType:
-		msg = &SessionCreate{}
-	case SessionDestroyType:
-		msg = &SessionDestroy{}
-	default:
-		err = errors.New("unrecognised message type")
-		return
-	}
-
-	err = msg.Read(r, e)
 	return
 }

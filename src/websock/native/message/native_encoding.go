@@ -18,16 +18,14 @@ type nativeEncoding struct {
 }
 
 func (e *nativeEncoding) EncodeHeader(w io.Writer, h interface{}) error {
-	enc := codec.NewEncoder(w, e.headerHandle)
-	return enc.Encode(h)
+	return codec.NewEncoder(w, e.headerHandle).Encode(h)
 }
 
 func (e *nativeEncoding) DecodeHeader(r io.Reader, n uint16, h interface{}) error {
-	dec := codec.NewDecoder(
+	return codec.NewDecoder(
 		&io.LimitedReader{R: r, N: int64(n)},
 		e.headerHandle,
-	)
-	return dec.Decode(h)
+	).Decode(h)
 }
 
 func (e *nativeEncoding) EncodePayload(w io.Writer, p *rinq.Payload) error {
@@ -35,11 +33,12 @@ func (e *nativeEncoding) EncodePayload(w io.Writer, p *rinq.Payload) error {
 	return err
 }
 
-func (e *nativeEncoding) DecodePayload(r io.Reader) (*rinq.Payload, error) {
+func (e *nativeEncoding) DecodePayload(r io.Reader) (p *rinq.Payload, err error) {
 	buf, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
+
+	if err == nil {
+		p = rinq.NewPayloadFromBytes(buf)
 	}
 
-	return rinq.NewPayloadFromBytes(buf), nil
+	return
 }
