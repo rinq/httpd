@@ -1,7 +1,6 @@
 package message
 
 import (
-	"encoding/binary"
 	"io"
 
 	"github.com/rinq/rinq-go/src/rinq"
@@ -20,19 +19,15 @@ type NotificationHeader struct {
 	Type string
 }
 
-func (m *Notification) Write(w io.Writer, e Encoding) (err error) {
-	err = binary.Write(w, binary.BigEndian, notificationType)
-
-	if err == nil {
-		err = binary.Write(w, binary.BigEndian, m.Session)
-	}
+func (m *Notification) write(w io.Writer, e Encoding) (err error) {
+	err = writePreamble(w, notificationType, m.Session)
 
 	if err == nil {
 		err = e.EncodeHeader(w, m.Header)
-	}
 
-	if err == nil {
-		err = e.EncodePayload(w, m.Payload)
+		if err == nil {
+			err = e.EncodePayload(w, m.Payload)
+		}
 	}
 
 	return

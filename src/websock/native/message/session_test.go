@@ -24,14 +24,22 @@ var _ = Describe("SessionCreate", func() {
 		})
 	})
 
-	Describe("Read", func() {
+	Describe("read", func() {
 		It("decodes the message", func() {
-			r := strings.NewReader("SC\xab\xcd")
+			r := strings.NewReader("SC\xab\xcd\x00\x00")
 
 			m, err := Read(r, nil)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(m).To(Equal(&SessionCreate{Session: 0xabcd}))
+		})
+
+		It("returns an error if the header-size is non-zero", func() {
+			r := strings.NewReader("SC\xab\xcd\x00\x01")
+
+			_, err := Read(r, nil)
+
+			Expect(err).Should(HaveOccurred())
 		})
 	})
 })
@@ -50,23 +58,31 @@ var _ = Describe("SessionDestroy", func() {
 		})
 	})
 
-	Describe("Read", func() {
+	Describe("read", func() {
 		It("decodes the message", func() {
-			r := strings.NewReader("SD\xab\xcd")
+			r := strings.NewReader("SD\xab\xcd\x00\x00")
 
 			m, err := Read(r, nil)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(m).To(Equal(&SessionDestroy{Session: 0xabcd}))
 		})
+
+		It("returns an error if the header-size is non-zero", func() {
+			r := strings.NewReader("SD\xab\xcd\x00\x01")
+
+			_, err := Read(r, nil)
+
+			Expect(err).Should(HaveOccurred())
+		})
 	})
 
-	Describe("Write", func() {
+	Describe("write", func() {
 		It("encodes the message", func() {
 			var buf bytes.Buffer
 			m := &SessionDestroy{Session: 0xabcd}
 
-			err := m.Write(&buf, nil)
+			err := Write(&buf, nil, m)
 
 			Expect(err).ShouldNot(HaveOccurred())
 

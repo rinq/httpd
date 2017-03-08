@@ -2,7 +2,6 @@ package message_test
 
 import (
 	"bytes"
-	"fmt"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -11,7 +10,7 @@ import (
 )
 
 var _ = Describe("Notification", func() {
-	Describe("Write", func() {
+	Describe("write", func() {
 		It("encodes the message", func() {
 			var buf bytes.Buffer
 			p := rinq.NewPayload("payload")
@@ -23,9 +22,8 @@ var _ = Describe("Notification", func() {
 				Payload: p,
 			}
 
-			err := m.Write(&buf, JSONEncoding)
+			err := Write(&buf, JSONEncoding, m)
 
-			fmt.Println(buf.String())
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expected := []byte{

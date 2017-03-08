@@ -11,15 +11,15 @@ type Incoming interface {
 	// Accept calls the appropriate visit method on v.
 	Accept(v Visitor) error
 
-	// Read decodes the next message from r into this message.
+	// read decodes the next message from r into this message.
 	// It is assumed that the message type has already been read from r.
-	Read(r io.Reader, e Encoding) error
+	read(r io.Reader, e Encoding) error
 }
 
 // Outgoing is an interface for messages that are sent to the browser.
 type Outgoing interface {
-	// Write encodes this message to w, including the message type.
-	Write(w io.Writer, e Encoding) error
+	// write encodes this message to w, including the message type.
+	write(w io.Writer, e Encoding) error
 }
 
 // Read decodes the next message from r.
@@ -34,12 +34,34 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 			msg = &SessionCreate{}
 		case sessionDestroyType:
 			msg = &SessionDestroy{}
+		case commandExecuteType:
+			msg = &Execute{}
 		default:
 			err = errors.New("unrecognised incoming message type")
 			return
 		}
 
-		err = msg.Read(r, e)
+		err = msg.read(r, e)
+	}
+
+	return
+}
+
+// Write encodes m to w.
+func Write(w io.Writer, e Encoding, m Outgoing) error {
+	return m.write(w, e)
+}
+
+func readPreamble(r io.Reader) (sess uint16, err error) {
+	err = binary.Read(r, binary.BigEndian, &sess)
+	return
+}
+
+func writePreamble(w io.Writer, t uint16, s uint16) (err error) {
+	err = binary.Write(w, binary.BigEndian, t)
+
+	if err == nil {
+		err = binary.Write(w, binary.BigEndian, s)
 	}
 
 	return

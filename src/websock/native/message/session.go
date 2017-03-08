@@ -2,6 +2,7 @@ package message
 
 import (
 	"encoding/binary"
+	"errors"
 	"io"
 )
 
@@ -15,8 +16,18 @@ func (m *SessionCreate) Accept(v Visitor) error {
 	return v.VisitSessionCreate(m)
 }
 
-func (m *SessionCreate) Read(r io.Reader, e Encoding) error {
-	return binary.Read(r, binary.BigEndian, &m.Session)
+func (m *SessionCreate) read(r io.Reader, e Encoding) (err error) {
+	m.Session, err = readPreamble(r)
+	if err == nil {
+		var size uint16
+		err = binary.Read(r, binary.BigEndian, &size)
+
+		if err == nil && size != 0 {
+			err = errors.New("non-zero header size in session create message")
+		}
+	}
+
+	return
 }
 
 // SessionDestroy is a bidirectional message.
@@ -35,19 +46,26 @@ func (m *SessionDestroy) Accept(v Visitor) error {
 	return v.VisitSessionDestroy(m)
 }
 
-func (m *SessionDestroy) Read(r io.Reader, e Encoding) error {
-	return binary.Read(r, binary.BigEndian, &m.Session)
-}
-
-func (m *SessionDestroy) Write(w io.Writer, e Encoding) (err error) {
-	err = binary.Write(w, binary.BigEndian, sessionDestroyType)
-
+func (m *SessionDestroy) read(r io.Reader, e Encoding) (err error) {
+	m.Session, err = readPreamble(r)
 	if err == nil {
-		err = binary.Write(w, binary.BigEndian, m.Session)
+		var size uint16
+		err = binary.Read(r, binary.BigEndian, &size)
+
+		if err == nil && size != 0 {
+			err = errors.New("non-zero header size in session destroy message")
+		}
 	}
 
+	return
+}
+
+func (m *SessionDestroy) write(w io.Writer, e Encoding) (err error) {
+	err = writePreamble(w, sessionDestroyType, m.Session)
+
 	if err == nil {
-		err = binary.Write(w, binary.BigEndian, uint16(0)) // empty header
+		// empty header size
+		_, err = w.Write([]byte{0, 0})
 	}
 
 	return

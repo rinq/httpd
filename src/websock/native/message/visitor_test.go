@@ -18,3 +18,8 @@ func (v *mockVisitor) VisitSessionDestroy(m *SessionDestroy) error {
 	v.VisitedMessage = m
 	return v.Error
 }
+
+func (v *mockVisitor) VisitExecute(m *Execute) error {
+	v.VisitedMessage = m
+	return v.Error
+}

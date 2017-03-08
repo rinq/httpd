@@ -38,40 +38,40 @@ type headerEncoding struct {
 	handle codec.Handle
 }
 
-func (e *headerEncoding) EncodeHeader(w io.Writer, h interface{}) (err error) {
+func (e *headerEncoding) EncodeHeader(w io.Writer, h interface{}) error {
 	buf := bufferpool.Get()
 	defer bufferpool.Put(buf)
 
-	err = codec.NewEncoder(buf, e.handle).Encode(h)
-
-	if err == nil {
-		if buf.Len() > math.MaxUint16 {
-			err = errors.New("header exceeds maximum size")
-		} else {
-			err = binary.Write(w, binary.BigEndian, uint16(buf.Len()))
-		}
+	enc := codec.NewEncoder(buf, e.handle)
+	if err := enc.Encode(h); err != nil {
+		return err
 	}
 
-	if err == nil {
-		_, err = buf.WriteTo(w)
+	if buf.Len() > math.MaxUint16 {
+		return errors.New("header exceeds maximum size")
 	}
 
-	return
+	if err := binary.Write(w, binary.BigEndian, uint16(buf.Len())); err != nil {
+		return err
+	}
+
+	_, err := buf.WriteTo(w)
+
+	return err
 }
 
-func (e *headerEncoding) DecodeHeader(r io.Reader, h interface{}) (err error) {
+func (e *headerEncoding) DecodeHeader(r io.Reader, h interface{}) error {
 	var size uint16
-
-	err = binary.Read(r, binary.BigEndian, &size)
-
-	if err == nil && size > 0 {
-		err = codec.NewDecoder(
-			&io.LimitedReader{R: r, N: int64(size)},
-			e.handle,
-		).Decode(h)
+	if err := binary.Read(r, binary.BigEndian, &size); err != nil {
+		return err
 	}
 
-	return
+	dec := codec.NewDecoder(
+		&io.LimitedReader{R: r, N: int64(size)},
+		e.handle,
+	)
+
+	return dec.Decode(h)
 }
 
 func init() {

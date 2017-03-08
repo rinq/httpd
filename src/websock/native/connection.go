@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -157,6 +158,20 @@ func (c *connection) VisitSessionDestroy(m *message.SessionDestroy) error {
 	go sess.Destroy()
 
 	return nil
+}
+
+func (c *connection) VisitExecute(m *message.Execute) error {
+	sess, ok := c.sessions[m.Session]
+	if !ok {
+		return fmt.Errorf("session %d does not exist", m.Session)
+	}
+
+	return sess.Execute(
+		context.TODO(),
+		m.Header.Namespace,
+		m.Header.Command,
+		m.Payload,
+	)
 }
 
 func (c *connection) send(msg message.Outgoing) error {
