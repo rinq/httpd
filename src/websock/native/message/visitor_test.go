@@ -24,6 +24,11 @@ func (v *mockVisitor) VisitSyncCall(m *SyncCall) error {
 	return v.Error
 }
 
+func (v *mockVisitor) VisitAsyncCall(m *AsyncCall) error {
+	v.VisitedMessage = m
+	return v.Error
+}
+
 func (v *mockVisitor) VisitExecute(m *Execute) error {
 	v.VisitedMessage = m
 	return v.Error

@@ -11,12 +11,12 @@ import (
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
-var _ = Describe("CallSync", func() {
+var _ = Describe("AsyncCall", func() {
 	Describe("Accept", func() {
 		It("invokes the correct visit method", func() {
 			expected := errors.New("visit error")
 			v := &mockVisitor{Error: expected}
-			m := &SyncCall{}
+			m := &AsyncCall{}
 
 			err := m.Accept(v)
 
@@ -28,11 +28,11 @@ var _ = Describe("CallSync", func() {
 	Describe("read", func() {
 		It("decodes the message", func() {
 			buf := []byte{
-				'C', 'C',
+				'A', 'C',
 				0xab, 0xcd, // session index
-				0, 20, // header length
+				0, 16, // header length
 			}
-			buf = append(buf, `[123,"ns","cmd",456]`...)
+			buf = append(buf, `["ns","cmd",456]`...)
 			buf = append(buf, `"payload"`...)
 
 			r := bytes.NewReader(buf)
@@ -40,10 +40,9 @@ var _ = Describe("CallSync", func() {
 
 			Expect(err).ShouldNot(HaveOccurred())
 
-			expected := &SyncCall{
+			expected := &AsyncCall{
 				Session: 0xabcd,
-				Header: SyncCallHeader{
-					Seq:       123,
+				Header: AsyncCallHeader{
 					Namespace: "ns",
 					Command:   "cmd",
 					Timeout:   456 * time.Millisecond,

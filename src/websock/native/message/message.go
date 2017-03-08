@@ -36,8 +36,8 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 			msg = &SessionDestroy{}
 		case commandSyncCallType:
 			msg = &SyncCall{}
-		// case commandAsyncCallType:
-		// 	msg = &AsyncCall{}
+		case commandAsyncCallType:
+			msg = &AsyncCall{}
 		case commandExecuteType:
 			msg = &Execute{}
 		default:

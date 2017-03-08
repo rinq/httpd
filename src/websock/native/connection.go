@@ -167,7 +167,7 @@ func (c *connection) VisitSyncCall(m *message.SyncCall) error {
 	}
 
 	_, err := sess.Call(
-		context.TODO(),
+		context.TODO(), // needs timeout
 		m.Header.Namespace,
 		m.Header.Command,
 		m.Payload,
@@ -178,6 +178,22 @@ func (c *connection) VisitSyncCall(m *message.SyncCall) error {
 	return err
 }
 
+func (c *connection) VisitAsyncCall(m *message.AsyncCall) error {
+	sess, ok := c.sessions[m.Session]
+	if !ok {
+		return fmt.Errorf("session %d does not exist", m.Session)
+	}
+
+	_, err := sess.CallAsync(
+		context.TODO(), // needs timeout
+		m.Header.Namespace,
+		m.Header.Command,
+		m.Payload,
+	)
+
+	return err
+}
+
 func (c *connection) VisitExecute(m *message.Execute) error {
 	sess, ok := c.sessions[m.Session]
 	if !ok {
@@ -185,7 +201,7 @@ func (c *connection) VisitExecute(m *message.Execute) error {
 	}
 
 	return sess.Execute(
-		context.TODO(),
+		context.Background(),
 		m.Header.Namespace,
 		m.Header.Command,
 		m.Payload,
