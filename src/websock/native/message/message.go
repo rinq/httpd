@@ -30,16 +30,16 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 
 	if err == nil {
 		switch mt {
-		case sessionCreateType:
-			msg = &SessionCreate{}
-		case sessionDestroyType:
-			msg = &SessionDestroy{}
 		case commandSyncCallType:
 			msg = &SyncCall{}
 		case commandAsyncCallType:
 			msg = &AsyncCall{}
 		case commandExecuteType:
 			msg = &Execute{}
+		case sessionCreateType:
+			msg = &SessionCreate{}
+		case sessionDestroyType:
+			msg = &SessionDestroy{}
 		default:
 			err = errors.New("unrecognised incoming message type")
 			return
@@ -72,9 +72,6 @@ func writePreamble(w io.Writer, t uint16, s uint16) (err error) {
 }
 
 const (
-	sessionCreateType  uint16 = 'S'<<8 | 'C'
-	sessionDestroyType uint16 = 'S'<<8 | 'D'
-
 	commandSyncCallType    uint16 = 'C'<<8 | 'C'
 	commandSyncSuccessType uint16 = 'C'<<8 | 'S'
 	commandSyncFailureType uint16 = 'C'<<8 | 'F'
@@ -87,5 +84,8 @@ const (
 
 	commandExecuteType uint16 = 'C'<<8 | 'X'
 
-	notificationType uint16 = 'N'<<8 | 'O'
+	sessionNotificationType uint16 = 'N'<<8 | 'O'
+
+	sessionCreateType  uint16 = 'S'<<8 | 'C'
+	sessionDestroyType uint16 = 'S'<<8 | 'D'
 )

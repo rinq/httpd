@@ -20,7 +20,7 @@ type NotificationHeader struct {
 }
 
 func (m *Notification) write(w io.Writer, e Encoding) (err error) {
-	err = writePreamble(w, notificationType, m.Session)
+	err = writePreamble(w, sessionNotificationType, m.Session)
 
 	if err == nil {
 		err = e.EncodeHeader(w, m.Header)

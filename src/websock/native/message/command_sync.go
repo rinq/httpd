@@ -41,3 +41,30 @@ func (m *SyncCall) read(r io.Reader, e Encoding) (err error) {
 
 	return
 }
+
+// SyncSuccess is an outgoing message containing the successful repsonse to
+// a synchronous call.
+type SyncSuccess struct {
+	Session uint16
+	Header  SyncSuccessHeader
+	Payload *rinq.Payload
+}
+
+// SyncSuccessHeader is the header structure for SyncSuccess messages.
+type SyncSuccessHeader struct {
+	Seq uint
+}
+
+func (m *SyncSuccess) write(w io.Writer, e Encoding) (err error) {
+	err = writePreamble(w, commandSyncSuccessType, m.Session)
+
+	if err == nil {
+		err = e.EncodeHeader(w, m.Header)
+
+		if err == nil {
+			e.EncodePayload(w, m.Payload)
+		}
+	}
+
+	return
+}
