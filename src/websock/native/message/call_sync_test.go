@@ -3,6 +3,7 @@ package message_test
 import (
 	"bytes"
 	"errors"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -10,12 +11,12 @@ import (
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
-var _ = Describe("Execute", func() {
+var _ = Describe("CallSync", func() {
 	Describe("Accept", func() {
 		It("invokes the correct visit method", func() {
 			expected := errors.New("visit error")
 			v := &mockVisitor{Error: expected}
-			m := &Execute{}
+			m := &SyncCall{}
 
 			err := m.Accept(v)
 
@@ -27,11 +28,11 @@ var _ = Describe("Execute", func() {
 	Describe("read", func() {
 		It("decodes the message", func() {
 			buf := []byte{
-				'C', 'X',
+				'C', 'C',
 				0xab, 0xcd, // session index
-				0, 12, // header length
+				0, 20, // header length
 			}
-			buf = append(buf, `["ns","cmd"]`...)
+			buf = append(buf, `[123,"ns","cmd",456]`...)
 			buf = append(buf, `"payload"`...)
 
 			r := bytes.NewReader(buf)
@@ -39,11 +40,13 @@ var _ = Describe("Execute", func() {
 
 			Expect(err).ShouldNot(HaveOccurred())
 
-			expected := &Execute{
+			expected := &SyncCall{
 				Session: 0xabcd,
-				Header: ExecuteHeader{
+				Header: SyncCallHeader{
+					Seq:       123,
 					Namespace: "ns",
 					Command:   "cmd",
+					Timeout:   456 * time.Millisecond,
 				},
 				Payload: rinq.NewPayload("payload"),
 			}

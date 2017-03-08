@@ -34,6 +34,10 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 			msg = &SessionCreate{}
 		case sessionDestroyType:
 			msg = &SessionDestroy{}
+		case commandSyncCallType:
+			msg = &SyncCall{}
+		// case commandAsyncCallType:
+		// 	msg = &AsyncCall{}
 		case commandExecuteType:
 			msg = &Execute{}
 		default:
@@ -71,12 +75,12 @@ const (
 	sessionCreateType  uint16 = 'S'<<8 | 'C'
 	sessionDestroyType uint16 = 'S'<<8 | 'D'
 
-	commandSyncRequestType uint16 = 'C'<<8 | 'C'
+	commandSyncCallType    uint16 = 'C'<<8 | 'C'
 	commandSyncSuccessType uint16 = 'C'<<8 | 'S'
 	commandSyncFailureType uint16 = 'C'<<8 | 'F'
 	commandSyncErrorType   uint16 = 'C'<<8 | 'E'
 
-	commandAsyncRequestType uint16 = 'A'<<8 | 'C'
+	commandAsyncCallType    uint16 = 'A'<<8 | 'C'
 	commandAsyncSuccessType uint16 = 'A'<<8 | 'S'
 	commandAsyncFailureType uint16 = 'A'<<8 | 'F'
 	commandAsyncErrorType   uint16 = 'A'<<8 | 'E'

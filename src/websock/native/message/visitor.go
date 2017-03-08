@@ -4,6 +4,7 @@ package message
 type Visitor interface {
 	VisitSessionCreate(*SessionCreate) error
 	VisitSessionDestroy(*SessionDestroy) error
-
+	VisitSyncCall(*SyncCall) error
+	// VisitAsyncCall(*AsyncCall) error
 	VisitExecute(*Execute) error
 }

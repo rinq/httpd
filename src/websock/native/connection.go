@@ -160,6 +160,24 @@ func (c *connection) VisitSessionDestroy(m *message.SessionDestroy) error {
 	return nil
 }
 
+func (c *connection) VisitSyncCall(m *message.SyncCall) error {
+	sess, ok := c.sessions[m.Session]
+	if !ok {
+		return fmt.Errorf("session %d does not exist", m.Session)
+	}
+
+	_, err := sess.Call(
+		context.TODO(),
+		m.Header.Namespace,
+		m.Header.Command,
+		m.Payload,
+	)
+
+	// TODO: calls need to be made in their own goroutine
+	// it's probably wise to have a max timeout as well.
+	return err
+}
+
 func (c *connection) VisitExecute(m *message.Execute) error {
 	sess, ok := c.sessions[m.Session]
 	if !ok {
@@ -182,5 +200,5 @@ func (c *connection) send(msg message.Outgoing) error {
 		return err
 	}
 
-	return msg.Write(w, c.encoding)
+	return message.Write(w, c.encoding, msg)
 }
