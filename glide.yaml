@@ -11,3 +11,6 @@ import:
 - package: github.com/golang/gddo
   subpackages:
   - httputil/header
+- package: github.com/ugorji/go
+  subpackages:
+  - codec

@@ -10,11 +10,13 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rinq/httpd/src/internal/statuspage"
 	"github.com/rinq/httpd/src/websock"
+	"github.com/rinq/httpd/src/websock/native"
+	"github.com/rinq/rinq-go/src/rinq"
 )
 
 func main() {
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	ws := websocketHandler(logger)
+	ws := websocketHandler(nil, logger) // TODO: initialize peer
 
 	err := http.ListenAndServe(
 		os.Getenv("RINQ_BIND"),
@@ -31,12 +33,11 @@ func main() {
 	}
 }
 
-func websocketHandler(logger *log.Logger) http.Handler {
+func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {
 	return websock.NewHandler(
 		os.Getenv("RINQ_ORIGIN"),
 		websock.NewProtocolSet(
-		// protocol.NewNativeProtocol("cbor", &codec.CborHandle{}),
-		// protocol.NewNativeProtocol("json", &codec.JsonHandle{}),
+			native.NewProtocol(nil), // TODO handler
 		),
 		logger,
 	)

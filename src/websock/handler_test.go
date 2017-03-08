@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"time"
 
-	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/rinq/httpd/src/websock"
@@ -83,5 +82,5 @@ type mockProtocol struct {
 	handleCalled bool
 }
 
-func (p *mockProtocol) Names() []string        { return []string{p.name} }
-func (p *mockProtocol) Handle(*websocket.Conn) { p.handleCalled = true }
+func (p *mockProtocol) Names() []string { return []string{p.name} }
+func (p *mockProtocol) Handle(Socket)   { p.handleCalled = true }

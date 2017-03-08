@@ -1,5 +1,5 @@
-hash: cf95fabe6d5f3d1c9e97d0e9b3086f273da2773547ec00bf8a19def8a347b021
-updated: 2017-03-04T13:04:49.101637379+10:00
+hash: 348aede6659755448e0919490689ec2fc9f1299aae8fe046cedff0bd1cd5c855
+updated: 2017-03-08T05:36:58.183150534+10:00
 imports:
 - name: github.com/golang/gddo
   version: 13f8d77bb721c2cd340cc84e1c569629dab9abfd
@@ -43,6 +43,15 @@ imports:
   - types
 - name: github.com/rinq/rinq-go
   version: 769fcd04ca718d0a6c81ad043803cf086f8f2355
+  subpackages:
+  - src/rinq
+  - src/rinq/ident
+  - src/rinq/internal/bufferpool
+  - src/rinq/internal/reflectutil
+- name: github.com/ugorji/go
+  version: c88ee250d0221a57af388746f5cf03768c21d6e2
+  subpackages:
+  - codec
 testImports:
 - name: golang.org/x/sys
   version: 075e574b89e4c2d22f2286a7e2b919519c6f3547

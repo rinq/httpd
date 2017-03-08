@@ -1,11 +1,9 @@
 package websock
 
-import "github.com/gorilla/websocket"
-
 // Protocol is an interface that handles one or more WebSocket sub-protocols.
 type Protocol interface {
 	Names() []string
-	Handle(*websocket.Conn)
+	Handle(Socket)
 }
 
 // ProtocolSet is a collection of Protocols.
