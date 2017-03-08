@@ -1,8 +1,6 @@
 package message
 
 import (
-	"encoding/binary"
-	"errors"
 	"io"
 )
 
@@ -18,15 +16,6 @@ func (m *SessionCreate) Accept(v Visitor) error {
 
 func (m *SessionCreate) read(r io.Reader, e Encoding) (err error) {
 	m.Session, err = readPreamble(r)
-	if err == nil {
-		var size uint16
-		err = binary.Read(r, binary.BigEndian, &size)
-
-		if err == nil && size != 0 {
-			err = errors.New("non-zero header size in session create message")
-		}
-	}
-
 	return
 }
 
@@ -48,15 +37,6 @@ func (m *SessionDestroy) Accept(v Visitor) error {
 
 func (m *SessionDestroy) read(r io.Reader, e Encoding) (err error) {
 	m.Session, err = readPreamble(r)
-	if err == nil {
-		var size uint16
-		err = binary.Read(r, binary.BigEndian, &size)
-
-		if err == nil && size != 0 {
-			err = errors.New("non-zero header size in session destroy message")
-		}
-	}
-
 	return
 }
 

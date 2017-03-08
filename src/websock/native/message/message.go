@@ -46,6 +46,14 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 		}
 
 		err = msg.read(r, e)
+
+		if err == nil {
+			buf := make([]byte, 1)
+			n, eof := r.Read(buf)
+			if n > 0 || eof != io.EOF {
+				err = errors.New("unconsumed frame data")
+			}
+		}
 	}
 
 	return

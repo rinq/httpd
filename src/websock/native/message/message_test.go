@@ -22,4 +22,11 @@ var _ = Describe("Read", func() {
 
 		Expect(err).Should(HaveOccurred())
 	})
+
+	It("returns an error if any of the data is unconsumed", func() {
+		r := strings.NewReader("SC\xab\xcd\x00") // Session create message with an extra null-byte
+		_, err := Read(r, nil)
+
+		Expect(err).Should(HaveOccurred())
+	})
 })

@@ -26,20 +26,12 @@ var _ = Describe("SessionCreate", func() {
 
 	Describe("read", func() {
 		It("decodes the message", func() {
-			r := strings.NewReader("SC\xab\xcd\x00\x00")
+			r := strings.NewReader("SC\xab\xcd")
 
 			m, err := Read(r, nil)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(m).To(Equal(&SessionCreate{Session: 0xabcd}))
-		})
-
-		It("returns an error if the header-size is non-zero", func() {
-			r := strings.NewReader("SC\xab\xcd\x00\x01")
-
-			_, err := Read(r, nil)
-
-			Expect(err).Should(HaveOccurred())
 		})
 	})
 })
@@ -60,20 +52,12 @@ var _ = Describe("SessionDestroy", func() {
 
 	Describe("read", func() {
 		It("decodes the message", func() {
-			r := strings.NewReader("SD\xab\xcd\x00\x00")
+			r := strings.NewReader("SD\xab\xcd")
 
 			m, err := Read(r, nil)
 
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(m).To(Equal(&SessionDestroy{Session: 0xabcd}))
-		})
-
-		It("returns an error if the header-size is non-zero", func() {
-			r := strings.NewReader("SD\xab\xcd\x00\x01")
-
-			_, err := Read(r, nil)
-
-			Expect(err).Should(HaveOccurred())
 		})
 	})
 
