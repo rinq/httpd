@@ -83,3 +83,34 @@ var _ = Describe("SyncSuccess", func() {
 		})
 	})
 })
+
+var _ = Describe("SyncFailure", func() {
+	Describe("write", func() {
+		It("encodes the message", func() {
+			var buf bytes.Buffer
+			p := rinq.NewPayload("payload")
+			m := &SyncFailure{
+				Session: 0xabcd,
+				Header: SyncFailureHeader{
+					Seq:            123,
+					FailureType:    "fail-type",
+					FailureMessage: "message",
+				},
+				Payload: p,
+			}
+
+			err := Write(&buf, JSONEncoding, m)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			expected := []byte{
+				'C', 'F',
+				0xab, 0xcd, // session index
+				0, 27, // header size
+			}
+			expected = append(expected, `[123,"fail-type","message"]`...)
+			expected = append(expected, `"payload"`...)
+			Expect(buf.Bytes()).To(Equal(expected))
+		})
+	})
+})

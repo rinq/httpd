@@ -68,3 +68,32 @@ func (m *SyncSuccess) write(w io.Writer, e Encoding) (err error) {
 
 	return
 }
+
+// SyncFailure is an outgoing message containing a failure repsonse to
+// a synchronous call.
+type SyncFailure struct {
+	Session uint16
+	Header  SyncFailureHeader
+	Payload *rinq.Payload
+}
+
+// SyncFailureHeader is the header structure for SyncFailure messages.
+type SyncFailureHeader struct {
+	Seq            uint
+	FailureType    string
+	FailureMessage string
+}
+
+func (m *SyncFailure) write(w io.Writer, e Encoding) (err error) {
+	err = writePreamble(w, commandSyncFailureType, m.Session)
+
+	if err == nil {
+		err = e.EncodeHeader(w, m.Header)
+
+		if err == nil {
+			e.EncodePayload(w, m.Payload)
+		}
+	}
+
+	return
+}
