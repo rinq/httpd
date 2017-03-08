@@ -114,3 +114,29 @@ var _ = Describe("SyncFailure", func() {
 		})
 	})
 })
+
+var _ = Describe("SyncError", func() {
+	Describe("write", func() {
+		It("encodes the message", func() {
+			var buf bytes.Buffer
+			m := &SyncError{
+				Session: 0xabcd,
+				Header: SyncErrorHeader{
+					Seq: 123,
+				},
+			}
+
+			err := Write(&buf, JSONEncoding, m)
+
+			Expect(err).ShouldNot(HaveOccurred())
+
+			expected := []byte{
+				'C', 'E',
+				0xab, 0xcd, // session index
+				0, 5, // header size
+			}
+			expected = append(expected, `[123]`...)
+			Expect(buf.Bytes()).To(Equal(expected))
+		})
+	})
+})

@@ -97,3 +97,25 @@ func (m *SyncFailure) write(w io.Writer, e Encoding) (err error) {
 
 	return
 }
+
+// SyncError is an outgoing message containing a failure repsonse to
+// a synchronous call.
+type SyncError struct {
+	Session uint16
+	Header  SyncErrorHeader
+}
+
+// SyncErrorHeader is the header structure for SyncError messages.
+type SyncErrorHeader struct {
+	Seq uint
+}
+
+func (m *SyncError) write(w io.Writer, e Encoding) (err error) {
+	err = writePreamble(w, commandSyncErrorType, m.Session)
+
+	if err == nil {
+		err = e.EncodeHeader(w, m.Header)
+	}
+
+	return
+}
