@@ -2,9 +2,11 @@ package native
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native/message"
+	"github.com/rinq/rinq-go/src/rinq"
 )
 
 const protocolPrefix = "rinq-1.0+"
@@ -18,7 +20,15 @@ type protocol struct {
 type handler func(websock.Socket, message.Encoding) error
 
 // NewProtocol returns a new websock.Protocol for the "native" Rinq protocol.
-func NewProtocol(h handler) websock.Protocol {
+func NewProtocol(
+	peer rinq.Peer,
+	ping time.Duration,
+) websock.Protocol {
+	h := func(s websock.Socket, e message.Encoding) error {
+		con := newConnection(peer, ping, s, e)
+		return con.Run()
+	}
+
 	return &protocol{h}
 }
 

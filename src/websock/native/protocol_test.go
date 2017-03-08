@@ -32,7 +32,7 @@ var _ = Describe("protocol", func() {
 			return nil
 		}
 
-		subject = NewProtocol(handle)
+		subject = &protocol{handle}
 	})
 
 	Describe("Names", func() {
@@ -60,6 +60,14 @@ var _ = Describe("protocol", func() {
 			Entry("cbor", "rinq-1.0+cbor", message.CBOREncoding),
 			Entry("json", "rinq-1.0+json", message.JSONEncoding),
 		)
+
+		It("panics if the subprotocol is not supported", func() {
+			socket := &mockSocket{subprotocol: "unknown"}
+
+			Expect(func() {
+				subject.Handle(socket)
+			}).To(Panic())
+		})
 	})
 })
 
