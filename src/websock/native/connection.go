@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 )
@@ -13,7 +14,7 @@ import (
 type connection struct {
 	peer     rinq.Peer
 	ping     time.Duration
-	socket   *websocket.Conn
+	socket   websock.Socket
 	encoding message.Encoding
 
 	incoming  chan message.Incoming
@@ -28,7 +29,7 @@ type connection struct {
 func newConnection(
 	peer rinq.Peer,
 	ping time.Duration,
-	socket *websocket.Conn,
+	socket websock.Socket,
 	encoding message.Encoding,
 ) *connection {
 	return &connection{

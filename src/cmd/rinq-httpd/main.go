@@ -37,7 +37,7 @@ func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {
 	return websock.NewHandler(
 		os.Getenv("RINQ_ORIGIN"),
 		websock.NewProtocolSet(
-			native.NewProtocol(peer, pingInterval()),
+			native.NewProtocol(nil), // TODO handler
 		),
 		logger,
 	)
