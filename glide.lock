@@ -1,14 +1,14 @@
-hash: 348aede6659755448e0919490689ec2fc9f1299aae8fe046cedff0bd1cd5c855
-updated: 2017-03-08T05:36:58.183150534+10:00
+hash: 9c47f4b24ab138dea1c009102563f26b1d4d1b387b31fbabac99eaa4db7b56c5
+updated: 2017-03-08T18:39:31.419083911+10:00
 imports:
 - name: github.com/golang/gddo
-  version: 13f8d77bb721c2cd340cc84e1c569629dab9abfd
+  version: 4544b8858aa7e119448f90172ea6790873f59b38
   subpackages:
   - httputil/header
 - name: github.com/gorilla/websocket
   version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
 - name: github.com/onsi/ginkgo
-  version: bb93381d543b0e5725244abe752214a110791d01
+  version: ab07225d112dc7a93c289ac5b2e12735c2c46035
   subpackages:
   - config
   - extensions/table
@@ -28,7 +28,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: c463cd2a8578290d4be7a25cba69de81cf35785e
+  version: 1de7ab2df9105aa5c15c4d7e14a8a514e3cb8d4b
   subpackages:
   - format
   - internal/assertion
@@ -42,7 +42,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/rinq/rinq-go
-  version: 769fcd04ca718d0a6c81ad043803cf086f8f2355
+  version: fe8957f99315b7d61b221d70ebc98250283ebc3f
   subpackages:
   - src/rinq
   - src/rinq/ident
@@ -54,7 +54,7 @@ imports:
   - codec
 testImports:
 - name: golang.org/x/sys
-  version: 075e574b89e4c2d22f2286a7e2b919519c6f3547
+  version: d67a3279aecd76a65c4c9e6c352c888f5b3a574a
   subpackages:
   - unix
 - name: gopkg.in/yaml.v2
