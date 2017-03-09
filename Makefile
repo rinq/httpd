@@ -2,7 +2,11 @@
 
 .PHONY: run
 run: $(BUILD_PATH)/debug/$(CURRENT_OS)/$(CURRENT_ARCH)/rinq-httpd
-	RINQ_BIND=":8081" RINQ_ORIGIN="*" $(BUILD_PATH)/debug/$(CURRENT_OS)/$(CURRENT_ARCH)/rinq-httpd
+	RINQ_BIND=":8081" RINQ_ORIGIN="*" "$<"
+
+.PHONY: run-echo-server
+run-echo-server: $(BUILD_PATH)/debug/$(CURRENT_OS)/$(CURRENT_ARCH)/echo-server
+	"$<"
 
 artifacts/build/Makefile.in:
 	mkdir -p "$(@D)"
