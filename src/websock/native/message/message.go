@@ -3,6 +3,7 @@ package message
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -41,7 +42,7 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 		case sessionDestroyType:
 			msg = &SessionDestroy{}
 		default:
-			err = errors.New("unrecognised incoming message type")
+			err = fmt.Errorf("unrecognised incoming message type: 0x%04x", mt)
 			return
 		}
 
