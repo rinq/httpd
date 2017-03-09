@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -16,29 +18,67 @@ import (
 )
 
 func main() {
-	// TODO: this env var will be handled by rinq-go
-	// https://github.com/rinq/rinq-go/issues/94
-	peer, err := amqp.Dial(os.Getenv("RING_AMQP_DSN"))
-	if err != nil {
-		panic(err)
-	}
+	rand.Seed(time.Now().UnixNano())
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
-	ws := websocketHandler(peer, logger)
+	var ws http.Handler
 
-	err = http.ListenAndServe(
-		os.Getenv("RINQ_BIND"),
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := &http.Server{
+		Addr: os.Getenv("RINQ_BIND"),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if websocket.IsWebSocketUpgrade(r) {
 				ws.ServeHTTP(w, r)
 			} else {
 				statuspage.Write(w, r, http.StatusUpgradeRequired)
 			}
 		}),
-	)
-	if err != nil {
-		panic(err)
 	}
+
+	for {
+		peer := connect()
+		ws = websocketHandler(peer, logger)
+
+		done := make(chan error, 1)
+		go serve(server, done)
+
+		select {
+		case <-peer.Done():
+			if err := peer.Err(); err != nil {
+				// TODO: log
+				fmt.Println(err)
+			}
+			server.Close()
+
+		case err := <-done:
+			if err != nil {
+				// TODO: log
+				fmt.Println(err)
+			}
+			time.Sleep(3 * time.Second)
+		}
+	}
+}
+
+func connect() rinq.Peer {
+	for {
+		// TODO: this env var will be handled by rinq-go
+		// https://github.com/rinq/rinq-go/issues/94
+		peer, err := amqp.Dial(os.Getenv("RING_AMQP_DSN"))
+		if err == nil {
+			return peer
+		}
+
+		fmt.Println(err) // TODO: log
+		time.Sleep(3 * time.Second)
+	}
+}
+
+func serve(server *http.Server, c chan<- error) {
+	if err := server.ListenAndServe(); err != nil {
+		c <- err
+	}
+
+	close(c)
 }
 
 func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {

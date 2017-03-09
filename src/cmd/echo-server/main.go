@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"os"
 	"time"
 
@@ -56,6 +57,8 @@ func timeoutCommand(ctx context.Context, peer rinq.Peer, req rinq.Request, res r
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	// TODO: this env var will be handled by rinq-go
 	// https://github.com/rinq/rinq-go/issues/94
 	peer, err := amqp.Dial(os.Getenv("RING_AMQP_DSN"))
