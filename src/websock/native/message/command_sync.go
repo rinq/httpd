@@ -119,3 +119,39 @@ func (m *SyncError) write(w io.Writer, e Encoding) (err error) {
 
 	return
 }
+
+// NewSyncResponse returns an outgoing message to send a synchronous command
+// response to the client.
+func NewSyncResponse(
+	session uint16,
+	seq uint,
+	p *rinq.Payload, err error,
+) (Outgoing, bool) {
+	switch e := err.(type) {
+	case nil:
+		return &SyncSuccess{
+			Session: session,
+			Header:  SyncSuccessHeader{Seq: seq},
+			Payload: p,
+		}, true
+
+	case rinq.Failure:
+		return &SyncFailure{
+			Session: session,
+			Header: SyncFailureHeader{
+				Seq:            seq,
+				FailureType:    e.Type,
+				FailureMessage: e.Message,
+			},
+			Payload: p,
+		}, true
+
+	case rinq.CommandError:
+		return &SyncError{
+			Session: session,
+			Header:  SyncErrorHeader{Seq: seq},
+		}, true
+	}
+
+	return nil, false
+}

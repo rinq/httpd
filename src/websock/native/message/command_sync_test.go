@@ -140,3 +140,61 @@ var _ = Describe("SyncError", func() {
 		})
 	})
 })
+
+var _ = Describe("NewSyncResponse", func() {
+	It("returns a success response if err is nil", func() {
+		p := rinq.NewPayload(456)
+		m, ok := NewSyncResponse(0xabcd, 123, p, nil)
+
+		Expect(m).To(Equal(&SyncSuccess{
+			Session: 0xabcd,
+			Header:  SyncSuccessHeader{Seq: 123},
+			Payload: p,
+		}))
+
+		Expect(ok).To(BeTrue())
+	})
+
+	It("returns a failure response if err is a failure", func() {
+		p := rinq.NewPayload(456)
+		err := rinq.Failure{
+			Type:    "type",
+			Message: "message",
+			Payload: p,
+		}
+
+		m, ok := NewSyncResponse(0xabcd, 123, p, err)
+
+		Expect(m).To(Equal(&SyncFailure{
+			Session: 0xabcd,
+			Header: SyncFailureHeader{
+				Seq:            123,
+				FailureType:    "type",
+				FailureMessage: "message",
+			},
+			Payload: p,
+		}))
+
+		Expect(ok).To(BeTrue())
+	})
+
+	It("returns an error response if err is a command error", func() {
+		err := rinq.CommandError("error")
+		m, ok := NewSyncResponse(0xabcd, 123, nil, err)
+
+		Expect(m).To(Equal(&SyncError{
+			Session: 0xabcd,
+			Header:  SyncErrorHeader{Seq: 123},
+		}))
+
+		Expect(ok).To(BeTrue())
+	})
+
+	It("returns false for other errors", func() {
+		err := errors.New("error")
+		m, ok := NewSyncResponse(0xabcd, 123, nil, err)
+
+		Expect(m).To(BeNil())
+		Expect(ok).To(BeFalse())
+	})
+})

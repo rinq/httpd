@@ -121,3 +121,46 @@ func (m *AsyncError) write(w io.Writer, e Encoding) (err error) {
 
 	return
 }
+
+// NewAsyncResponse returns an outgoing message to send an asynchronous command
+// response to the client.
+func NewAsyncResponse(
+	session uint16,
+	ns, cmd string,
+	p *rinq.Payload, err error,
+) (Outgoing, bool) {
+	switch e := err.(type) {
+	case nil:
+		return &AsyncSuccess{
+			Session: session,
+			Header: AsyncSuccessHeader{
+				Namespace: ns,
+				Command:   cmd,
+			},
+			Payload: p,
+		}, true
+
+	case rinq.Failure:
+		return &AsyncFailure{
+			Session: session,
+			Header: AsyncFailureHeader{
+				Namespace:      ns,
+				Command:        cmd,
+				FailureType:    e.Type,
+				FailureMessage: e.Message,
+			},
+			Payload: p,
+		}, true
+
+	case rinq.CommandError:
+		return &AsyncError{
+			Session: session,
+			Header: AsyncErrorHeader{
+				Namespace: ns,
+				Command:   cmd,
+			},
+		}, true
+	}
+
+	return nil, false
+}

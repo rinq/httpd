@@ -32,3 +32,12 @@ func (m *Notification) write(w io.Writer, e Encoding) (err error) {
 
 	return
 }
+
+// NewNotification returns an outgoing message to send a notification to the client.
+func NewNotification(session uint16, n rinq.Notification) Outgoing {
+	return &Notification{
+		Session: session,
+		Header:  NotificationHeader{Type: n.Type},
+		Payload: n.Payload,
+	}
+}

@@ -37,3 +37,20 @@ var _ = Describe("Notification", func() {
 		})
 	})
 })
+
+var _ = Describe("NewNotification", func() {
+	It("returns a notification message", func() {
+		p := rinq.NewPayload(456)
+		n := rinq.Notification{
+			Type:    "type",
+			Payload: p,
+		}
+		m := NewNotification(0xabcd, n)
+
+		Expect(m).To(Equal(&Notification{
+			Session: 0xabcd,
+			Header:  NotificationHeader{Type: "type"},
+			Payload: p,
+		}))
+	})
+})

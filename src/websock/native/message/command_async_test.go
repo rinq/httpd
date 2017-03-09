@@ -142,3 +142,68 @@ var _ = Describe("AsyncError", func() {
 		})
 	})
 })
+
+var _ = Describe("NewAsyncResponse", func() {
+	It("returns a success response if err is nil", func() {
+		p := rinq.NewPayload(456)
+		m, ok := NewAsyncResponse(0xabcd, "ns", "cmd", p, nil)
+
+		Expect(m).To(Equal(&AsyncSuccess{
+			Session: 0xabcd,
+			Header: AsyncSuccessHeader{
+				Namespace: "ns",
+				Command:   "cmd",
+			},
+			Payload: p,
+		}))
+
+		Expect(ok).To(BeTrue())
+	})
+
+	It("returns a failure response if err is a failure", func() {
+		p := rinq.NewPayload(456)
+		err := rinq.Failure{
+			Type:    "type",
+			Message: "message",
+			Payload: p,
+		}
+
+		m, ok := NewAsyncResponse(0xabcd, "ns", "cmd", p, err)
+
+		Expect(m).To(Equal(&AsyncFailure{
+			Session: 0xabcd,
+			Header: AsyncFailureHeader{
+				Namespace:      "ns",
+				Command:        "cmd",
+				FailureType:    "type",
+				FailureMessage: "message",
+			},
+			Payload: p,
+		}))
+
+		Expect(ok).To(BeTrue())
+	})
+
+	It("returns an error response if err is a command error", func() {
+		err := rinq.CommandError("error")
+		m, ok := NewAsyncResponse(0xabcd, "ns", "cmd", nil, err)
+
+		Expect(m).To(Equal(&AsyncError{
+			Session: 0xabcd,
+			Header: AsyncErrorHeader{
+				Namespace: "ns",
+				Command:   "cmd",
+			},
+		}))
+
+		Expect(ok).To(BeTrue())
+	})
+
+	It("returns false for other errors", func() {
+		err := errors.New("error")
+		m, ok := NewAsyncResponse(0xabcd, "ns", "cmd", nil, err)
+
+		Expect(m).To(BeNil())
+		Expect(ok).To(BeFalse())
+	})
+})

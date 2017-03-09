@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
+	"github.com/rinq/rinq-go/src/rinq/ident"
 )
 
 type connection struct {
@@ -22,7 +24,7 @@ type connection struct {
 	quit      chan error
 	done      chan struct{}
 
-	sessions map[uint16]*session
+	sessions map[uint16]rinq.Session
 }
 
 func newConnection(
@@ -43,7 +45,7 @@ func newConnection(
 		quit:      make(chan error),
 		done:      make(chan struct{}),
 
-		sessions: map[uint16]*session{},
+		sessions: map[uint16]rinq.Session{},
 	}
 }
 
@@ -126,77 +128,124 @@ func (c *connection) stop(err error) {
 	}
 }
 
+func (c *connection) send(msg message.Outgoing) error {
+	w, err := c.socket.NextWriter(websocket.BinaryMessage)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+
+	return message.Write(w, c.encoding, msg)
+}
+
+func (c *connection) monitor(index uint16, sess rinq.Session) {
+	select {
+	case <-c.done:
+		return
+	case <-sess.Done():
+	}
+
+	select {
+	case c.destroyed <- index:
+	case <-c.done:
+	}
+}
+
+func (c *connection) notificationHandler(index uint16) rinq.NotificationHandler {
+	return func(_ context.Context, _ rinq.Session, n rinq.Notification) {
+		m := message.NewNotification(index, n)
+		c.send(m)
+	}
+}
+
+func (c *connection) asyncHandler(index uint16) rinq.AsyncHandler {
+	return func(
+		_ context.Context, _ rinq.Session, _ ident.MessageID,
+		ns, cmd string,
+		p *rinq.Payload, err error,
+	) {
+		if m, ok := message.NewAsyncResponse(index, ns, cmd, p, err); ok {
+			c.send(m)
+		}
+	}
+}
+
 func (c *connection) VisitSessionCreate(m *message.SessionCreate) error {
 	if _, ok := c.sessions[m.Session]; ok {
 		return fmt.Errorf("session %d already exists", m.Session)
 	}
 
-	sess, err := newSession(
-		m.Session,
-		c.peer.Session(),
-		c.outgoing,
-		c.destroyed,
-		c.quit,
-		c.done,
-	)
+	sess := c.peer.Session()
 
-	if err != nil {
+	if err := sess.Listen(c.notificationHandler(m.Session)); err != nil {
+		return err
+	}
+
+	if err := sess.SetAsyncHandler(c.asyncHandler(m.Session)); err != nil {
 		return err
 	}
 
 	c.sessions[m.Session] = sess
+	go c.monitor(m.Session, sess)
 
 	return nil
 }
 
 func (c *connection) VisitSessionDestroy(m *message.SessionDestroy) error {
-	sess, ok := c.sessions[m.Session]
-	if !ok {
-		return fmt.Errorf("session %d does not exist", m.Session)
+	if sess, ok := c.sessions[m.Session]; ok {
+		delete(c.sessions, m.Session)
+		go sess.Destroy()
+		return nil
 	}
 
-	delete(c.sessions, m.Session)
-	sess.Destroy()
-
-	return nil
+	return fmt.Errorf("session %d does not exist", m.Session)
 }
 
 func (c *connection) VisitSyncCall(m *message.SyncCall) error {
-	sess, ok := c.sessions[m.Session]
-	if !ok {
-		return fmt.Errorf("session %d does not exist", m.Session)
+	if sess, ok := c.sessions[m.Session]; ok {
+		go func() {
+			p, err := sess.Call(
+				context.TODO(), // needs timeout
+				m.Header.Namespace,
+				m.Header.Command,
+				m.Payload,
+			)
+
+			if m, ok := message.NewSyncResponse(m.Session, m.Header.Seq, p, err); ok {
+				c.send(m)
+			}
+		}()
+
+		return nil
 	}
 
-	sess.Call(m)
-
-	return nil
+	return fmt.Errorf("session %d does not exist", m.Session)
 }
 
 func (c *connection) VisitAsyncCall(m *message.AsyncCall) error {
-	sess, ok := c.sessions[m.Session]
-	if !ok {
-		return fmt.Errorf("session %d does not exist", m.Session)
-	}
+	if sess, ok := c.sessions[m.Session]; ok {
+		_, err := sess.CallAsync(
+			context.TODO(), // needs timeout
+			m.Header.Namespace,
+			m.Header.Command,
+			m.Payload,
+		)
 
-	return sess.CallAsync(m)
-}
-
-func (c *connection) VisitExecute(m *message.Execute) error {
-	sess, ok := c.sessions[m.Session]
-	if !ok {
-		return fmt.Errorf("session %d does not exist", m.Session)
-	}
-
-	return sess.Execute(m)
-}
-
-func (c *connection) send(msg message.Outgoing) error {
-	w, err := c.socket.NextWriter(websocket.BinaryMessage)
-	defer w.Close()
-
-	if err != nil {
 		return err
 	}
 
-	return message.Write(w, c.encoding, msg)
+	return fmt.Errorf("session %d does not exist", m.Session)
+}
+
+func (c *connection) VisitExecute(m *message.Execute) error {
+	if sess, ok := c.sessions[m.Session]; ok {
+		return sess.Execute(
+			context.Background(),
+			m.Header.Namespace,
+			m.Header.Command,
+			m.Payload,
+		)
+	}
+
+	return fmt.Errorf("session %d does not exist", m.Session)
 }
