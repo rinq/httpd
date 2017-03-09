@@ -1,7 +1,6 @@
 package native
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
-	"github.com/rinq/rinq-go/src/rinq/ident"
 )
 
 type connection struct {
@@ -24,7 +22,7 @@ type connection struct {
 	quit      chan error
 	done      chan struct{}
 
-	sessions map[uint16]rinq.Session
+	sessions map[uint16]*session
 }
 
 func newConnection(
@@ -45,7 +43,7 @@ func newConnection(
 		quit:      make(chan error),
 		done:      make(chan struct{}),
 
-		sessions: map[uint16]rinq.Session{},
+		sessions: map[uint16]*session{},
 	}
 }
 
@@ -128,33 +126,25 @@ func (c *connection) stop(err error) {
 	}
 }
 
-func (c *connection) monitorSession(sess rinq.Session, index uint16) {
-	<-sess.Done()
-
-	select {
-	case c.destroyed <- index:
-	case <-c.done:
-	}
-}
-
 func (c *connection) VisitSessionCreate(m *message.SessionCreate) error {
 	if _, ok := c.sessions[m.Session]; ok {
 		return fmt.Errorf("session %d already exists", m.Session)
 	}
 
-	sess := c.peer.Session()
+	sess, err := newSession(
+		m.Session,
+		c.peer.Session(),
+		c.outgoing,
+		c.destroyed,
+		c.quit,
+		c.done,
+	)
 
-	if err := sess.Listen(c.notificationHandler(m.Session)); err != nil {
-		return err
-	}
-
-	if err := sess.SetAsyncHandler(c.asyncHandler(m.Session)); err != nil {
+	if err != nil {
 		return err
 	}
 
 	c.sessions[m.Session] = sess
-
-	go c.monitorSession(sess, m.Session)
 
 	return nil
 }
@@ -166,8 +156,7 @@ func (c *connection) VisitSessionDestroy(m *message.SessionDestroy) error {
 	}
 
 	delete(c.sessions, m.Session)
-
-	go sess.Destroy()
+	sess.Destroy()
 
 	return nil
 }
@@ -178,7 +167,7 @@ func (c *connection) VisitSyncCall(m *message.SyncCall) error {
 		return fmt.Errorf("session %d does not exist", m.Session)
 	}
 
-	go c.call(sess, m)
+	sess.Call(m)
 
 	return nil
 }
@@ -189,14 +178,7 @@ func (c *connection) VisitAsyncCall(m *message.AsyncCall) error {
 		return fmt.Errorf("session %d does not exist", m.Session)
 	}
 
-	_, err := sess.CallAsync(
-		context.TODO(), // needs timeout
-		m.Header.Namespace,
-		m.Header.Command,
-		m.Payload,
-	)
-
-	return err
+	return sess.CallAsync(m)
 }
 
 func (c *connection) VisitExecute(m *message.Execute) error {
@@ -205,12 +187,7 @@ func (c *connection) VisitExecute(m *message.Execute) error {
 		return fmt.Errorf("session %d does not exist", m.Session)
 	}
 
-	return sess.Execute(
-		context.Background(),
-		m.Header.Namespace,
-		m.Header.Command,
-		m.Payload,
-	)
+	return sess.Execute(m)
 }
 
 func (c *connection) send(msg message.Outgoing) error {
@@ -222,105 +199,4 @@ func (c *connection) send(msg message.Outgoing) error {
 	}
 
 	return message.Write(w, c.encoding, msg)
-}
-
-func (c *connection) enqueue(msg message.Outgoing) {
-	select {
-	case c.outgoing <- msg:
-	case <-c.done:
-	}
-}
-
-func (c *connection) call(sess rinq.Session, m *message.SyncCall) {
-	in, err := sess.Call(
-		context.TODO(), // needs timeout
-		m.Header.Namespace,
-		m.Header.Command,
-		m.Payload,
-	)
-
-	switch e := err.(type) {
-	case nil:
-		c.enqueue(&message.SyncSuccess{
-			Session: m.Session,
-			Header:  message.SyncSuccessHeader{Seq: m.Header.Seq},
-			Payload: in,
-		})
-
-	case rinq.Failure:
-		c.enqueue(&message.SyncFailure{
-			Session: m.Session,
-			Header: message.SyncFailureHeader{
-				Seq:            m.Header.Seq,
-				FailureType:    e.Type,
-				FailureMessage: e.Message,
-			},
-			Payload: in,
-		})
-
-	case rinq.CommandError:
-		c.enqueue(&message.SyncError{
-			Session: m.Session,
-			Header:  message.SyncErrorHeader{Seq: m.Header.Seq},
-		})
-
-	default:
-		c.stop(err)
-	}
-}
-
-func (c *connection) notificationHandler(sessionIndex uint16) rinq.NotificationHandler {
-	return func(
-		ctx context.Context,
-		target rinq.Session,
-		n rinq.Notification,
-	) {
-		c.enqueue(&message.Notification{
-			Session: sessionIndex,
-			Header:  message.NotificationHeader{Type: n.Type},
-			Payload: n.Payload,
-		})
-	}
-}
-
-func (c *connection) asyncHandler(sessionIndex uint16) rinq.AsyncHandler {
-	return func(
-		ctx context.Context,
-		sess rinq.Session, msgID ident.MessageID,
-		ns, cmd string,
-		in *rinq.Payload, err error,
-	) {
-		switch e := err.(type) {
-		case nil:
-			c.enqueue(&message.AsyncSuccess{
-				Session: sessionIndex,
-				Header: message.AsyncSuccessHeader{
-					Namespace: ns,
-					Command:   cmd,
-				},
-				Payload: in,
-			})
-
-		case rinq.Failure:
-			c.enqueue(&message.AsyncFailure{
-				Session: sessionIndex,
-				Header: message.AsyncFailureHeader{
-					Namespace:      ns,
-					Command:        cmd,
-					FailureType:    e.Type,
-					FailureMessage: e.Message,
-				},
-				Payload: in,
-			})
-
-		case rinq.CommandError:
-			c.enqueue(&message.AsyncError{
-				Session: sessionIndex,
-				Header: message.AsyncErrorHeader{
-					Namespace: ns,
-					Command:   cmd,
-				},
-			})
-		}
-	}
 }
