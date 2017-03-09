@@ -12,13 +12,21 @@ import (
 	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native"
 	"github.com/rinq/rinq-go/src/rinq"
+	"github.com/rinq/rinq-go/src/rinq/amqp"
 )
 
 func main() {
-	logger := log.New(os.Stdout, "", log.LstdFlags)
-	ws := websocketHandler(nil, logger) // TODO: initialize peer
+	// TODO: this env var will be handled by rinq-go
+	// https://github.com/rinq/rinq-go/issues/94
+	peer, err := amqp.Dial(os.Getenv("RING_AMQP_DSN"))
+	if err != nil {
+		panic(err)
+	}
 
-	err := http.ListenAndServe(
+	logger := log.New(os.Stdout, "", log.LstdFlags)
+	ws := websocketHandler(peer, logger)
+
+	err = http.ListenAndServe(
 		os.Getenv("RINQ_BIND"),
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if websocket.IsWebSocketUpgrade(r) {
