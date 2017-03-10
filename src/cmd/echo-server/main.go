@@ -41,12 +41,15 @@ func notifyCommand(ctx context.Context, peer rinq.Peer, req rinq.Request, res ri
 	defer out.Close()
 
 	sess := peer.Session()
-	sess.Notify(
+
+	if err := sess.Notify(
 		ctx,
 		req.Source.Ref().ID,
 		"echo-notification",
 		out,
-	)
+	); err != nil {
+		panic(err)
+	}
 
 	res.Close()
 }

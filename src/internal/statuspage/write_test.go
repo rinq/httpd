@@ -1,12 +1,12 @@
-package statuspage_test
+package statuspage
 
 import (
 	"net/http"
 	"net/http/httptest"
+	"text/template"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/internal/statuspage"
 )
 
 var _ = Describe("Write", func() {
@@ -33,58 +33,77 @@ var _ = Describe("WriteMessage", func() {
 	})
 
 	It("writes the correct status code", func() {
-		WriteMessage(response, request, http.StatusNotFound, "")
+		_, err := WriteMessage(response, request, http.StatusNotFound, "")
 
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(response.Code).To(Equal(http.StatusNotFound))
 	})
 
 	It("includes the status code in the body", func() {
-		WriteMessage(response, request, http.StatusNotFound, "")
+		_, err := WriteMessage(response, request, http.StatusNotFound, "")
 
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(response.Body).To(ContainSubstring("404"))
 	})
 
 	It("includes the status name in the body", func() {
-		WriteMessage(response, request, http.StatusNotFound, "")
+		_, err := WriteMessage(response, request, http.StatusNotFound, "")
 
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(response.Body).To(ContainSubstring("Not Found"))
 	})
 
 	It("includes the status message in the body", func() {
-		WriteMessage(response, request, http.StatusNotFound, "custom-message")
+		_, err := WriteMessage(response, request, http.StatusNotFound, "custom-message")
 
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(response.Body).To(ContainSubstring("custom-message"))
 	})
 
 	It("includes the status message in a header", func() {
-		WriteMessage(response, request, http.StatusNotFound, "custom-message")
+		_, err := WriteMessage(response, request, http.StatusNotFound, "custom-message")
 
 		h := response.Header().Get("X-Status-Message")
+
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(h).To(Equal("custom-message"))
 	})
 
 	It("renders HTML if Accept header prioritizes it", func() {
 		request.Header = http.Header{}
 		request.Header.Add("Accept", "text/html;q=0.9,*/*;q=0.8")
-		WriteMessage(response, request, http.StatusNotFound, "")
+		_, err := WriteMessage(response, request, http.StatusNotFound, "")
 
 		h := response.Header().Get("Content-Type")
+
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(h).To(ContainSubstring("text/html"))
 	})
 
 	It("renders text if Accept header prioritizes it", func() {
 		request.Header = http.Header{}
 		request.Header.Add("Accept", "text/html;q=0.8,text/plain;q=0.9*/*;q=0.7")
-		WriteMessage(response, request, http.StatusNotFound, "")
+		_, err := WriteMessage(response, request, http.StatusNotFound, "")
 
 		h := response.Header().Get("Content-Type")
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(h).To(ContainSubstring("text/plain"))
 	})
 
 	It("renders text by default", func() {
-		WriteMessage(response, request, http.StatusNotFound, "")
+		_, err := WriteMessage(response, request, http.StatusNotFound, "")
 
 		h := response.Header().Get("Content-Type")
+		Expect(err).ShouldNot(HaveOccurred())
 		Expect(h).To(ContainSubstring("text/plain"))
+	})
+
+	It("returns an error if text rendering fails", func() {
+		prev := textTemplate
+		textTemplate = &template.Template{}
+		_, err := WriteMessage(response, request, http.StatusNotFound, "")
+		textTemplate = prev
+
+		Expect(err).Should(HaveOccurred())
 	})
 })

@@ -28,7 +28,10 @@ func WriteMessage(w http.ResponseWriter, r *http.Request, c int, m string) (int6
 	if contentType == "" {
 		contentType = "text/plain"
 		buf.Reset()
-		textTemplate.Execute(&buf, context)
+
+		if err := textTemplate.Execute(&buf, context); err != nil {
+			return 0, err
+		}
 	}
 
 	w.Header().Add("Content-Type", contentType+"; charset=utf-8")
