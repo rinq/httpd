@@ -62,7 +62,7 @@ func (m *SyncSuccess) write(w io.Writer, e Encoding) (err error) {
 		err = e.EncodeHeader(w, m.Header)
 
 		if err == nil {
-			e.EncodePayload(w, m.Payload)
+			err = e.EncodePayload(w, m.Payload)
 		}
 	}
 
@@ -91,7 +91,7 @@ func (m *SyncFailure) write(w io.Writer, e Encoding) (err error) {
 		err = e.EncodeHeader(w, m.Header)
 
 		if err == nil {
-			e.EncodePayload(w, m.Payload)
+			err = e.EncodePayload(w, m.Payload)
 		}
 	}
 

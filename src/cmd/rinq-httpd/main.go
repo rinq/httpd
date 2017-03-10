@@ -29,7 +29,9 @@ func main() {
 			if websocket.IsWebSocketUpgrade(r) {
 				ws.ServeHTTP(w, r)
 			} else {
-				statuspage.Write(w, r, http.StatusUpgradeRequired)
+				if _, err := statuspage.Write(w, r, http.StatusUpgradeRequired); err != nil {
+					fmt.Println(err) // TODO: log
+				}
 			}
 		}),
 	}
@@ -47,7 +49,10 @@ func main() {
 				// TODO: log
 				fmt.Println(err)
 			}
-			server.Close()
+			if err := server.Close(); err != nil {
+				// TODO: log
+				fmt.Println(err)
+			}
 
 		case err := <-done:
 			if err != nil {

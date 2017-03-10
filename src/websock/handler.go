@@ -31,7 +31,9 @@ func NewHandler(
 			CheckOrigin:       newOriginChecker(origin),
 			EnableCompression: true,
 			Error: func(w http.ResponseWriter, r *http.Request, c int, err error) {
-				statuspage.Write(w, r, c)
+				if _, err := statuspage.Write(w, r, c); err != nil {
+					fmt.Println(err) // TODO: log
+				}
 			},
 		},
 	}
