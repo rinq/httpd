@@ -24,7 +24,7 @@ func main() {
 	var ws http.Handler
 
 	server := &http.Server{
-		Addr: os.Getenv("RINQ_BIND"),
+		Addr: os.Getenv("RINQ_HTTPD_BIND"),
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if websocket.IsWebSocketUpgrade(r) {
 				ws.ServeHTTP(w, r)
@@ -83,7 +83,7 @@ func serve(server *http.Server, c chan<- error) {
 
 func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {
 	return websock.NewHandler(
-		os.Getenv("RINQ_ORIGIN"),
+		os.Getenv("RINQ_HTTPD_ORIGIN"),
 		websock.NewProtocolSet(
 			native.NewProtocol(
 				peer,
@@ -95,7 +95,7 @@ func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {
 }
 
 func pingInterval() time.Duration {
-	i, err := strconv.ParseUint(os.Getenv("RINQ_PING"), 10, 64)
+	i, err := strconv.ParseUint(os.Getenv("RINQ_HTTPD_PING"), 10, 64)
 	if err != nil {
 		return 10 * time.Second
 	}

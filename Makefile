@@ -1,3 +1,5 @@
+DOCKER_REPO ?= rinq/httpd
+
 -include artifacts/make/go.mk
 
 .PHONY: run
