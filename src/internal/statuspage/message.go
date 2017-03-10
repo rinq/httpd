@@ -5,6 +5,16 @@ import "net/http"
 // Message returns a short, human-readable description of the given HTTP
 // status code.
 func Message(c int) string {
+	if c >= 400 && c <= 499 {
+		return clientMessage(c)
+	} else if c >= 500 && c <= 599 {
+		return serverMessage(c)
+	}
+
+	return "That's all we know."
+}
+
+func clientMessage(c int) string {
 	switch c {
 	// 4xx
 	case http.StatusBadRequest:
@@ -33,8 +43,13 @@ func Message(c int) string {
 		return "Your browser has sent a request header that is too large to process."
 	case http.StatusUnavailableForLegalReasons:
 		return "Your request has been denied for legal reasons."
+	default:
+		return "We're sorry, something is wrong with your request!"
+	}
+}
 
-	// 5xx
+func serverMessage(c int) string {
+	switch c {
 	case http.StatusNotImplemented:
 		return "The feature you've requested is not supported."
 	case http.StatusBadGateway:
@@ -45,11 +60,7 @@ func Message(c int) string {
 		return "The service you've requested did not respond in a timely manner, please try again."
 	case http.StatusHTTPVersionNotSupported:
 		return "Your browser's HTTP version is not supported."
+	default:
+		return "We're sorry, something is wrong with our server!"
 	}
-
-	if 400 <= c && c <= 599 {
-		return "We're sorry, something went wrong!"
-	}
-
-	return "That's all we know."
 }
