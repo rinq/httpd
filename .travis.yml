@@ -12,12 +12,17 @@ script: make ci -j 8
 after_script: bash <(curl -s https://codecov.io/bash)
 before_deploy: docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 deploy:
-  provider: script
+- provider: script
   script: make docker-push
   skip_cleanup: true
   go: '1.8'
   on:
     tags: true
+- provider: script
+  script: make docker-push
+  skip_cleanup: true
+  go: '1.8'
+  on:
     branch: master
 env:
   global:
