@@ -29,7 +29,7 @@ var (
 
 	// JSONEncoding is an Encoding that uses JSON to message headers an
 	// application payloads. Payloads are converted to and from Rinq's native
-	// CBOR as neccessary.
+	// CBOR as necessary.
 	JSONEncoding Encoding
 )
 
