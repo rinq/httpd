@@ -92,13 +92,16 @@ func (c *connection) Run() error {
 
 func (c *connection) pong(string) error {
 	deadline := time.Now().Add(c.ping * 2)
-	c.socket.SetReadDeadline(deadline)
-	return nil
+	return c.socket.SetReadDeadline(deadline)
 }
 
 func (c *connection) read() {
 	c.socket.SetPongHandler(c.pong)
-	c.pong("")
+
+	if err := c.pong(""); err != nil {
+		c.stop(err)
+		return
+	}
 
 	for {
 		_, r, err := c.socket.NextReader()
@@ -128,6 +131,8 @@ func (c *connection) stop(err error) {
 	}
 }
 
+// send writes a message to the client. It is NOT thread-safe, it must only
+// be called from the goroutine running the connections' main loop.
 func (c *connection) send(msg message.Outgoing) error {
 	w, err := c.socket.NextWriter(websocket.BinaryMessage)
 	if err != nil {
@@ -138,6 +143,17 @@ func (c *connection) send(msg message.Outgoing) error {
 	return message.Write(w, c.encoding, msg)
 }
 
+// enqueue queues a message to be sent to the client. It may be called from
+// any goroutine.
+func (c *connection) enqueue(msg message.Outgoing) {
+	select {
+	case c.outgoing <- msg:
+	case <-c.done:
+	}
+}
+
+// monitor waits for a session to be destroyed, then enqueues its removal from
+// the session map.
 func (c *connection) monitor(index uint16, sess rinq.Session) {
 	select {
 	case <-c.done:
@@ -154,7 +170,7 @@ func (c *connection) monitor(index uint16, sess rinq.Session) {
 func (c *connection) notificationHandler(index uint16) rinq.NotificationHandler {
 	return func(_ context.Context, _ rinq.Session, n rinq.Notification) {
 		m := message.NewNotification(index, n)
-		c.send(m)
+		c.enqueue(m)
 	}
 }
 
@@ -165,7 +181,7 @@ func (c *connection) asyncHandler(index uint16) rinq.AsyncHandler {
 		p *rinq.Payload, err error,
 	) {
 		if m, ok := message.NewAsyncResponse(index, ns, cmd, p, err); ok {
-			c.send(m)
+			c.enqueue(m)
 		}
 	}
 }
@@ -212,7 +228,7 @@ func (c *connection) VisitSyncCall(m *message.SyncCall) error {
 			)
 
 			if m, ok := message.NewSyncResponse(m.Session, m.Header.Seq, p, err); ok {
-				c.send(m)
+				c.enqueue(m)
 			}
 		}()
 
