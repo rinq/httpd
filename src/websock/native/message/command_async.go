@@ -41,7 +41,7 @@ func (m *AsyncCall) read(r io.Reader, e Encoding) (err error) {
 	return
 }
 
-// AsyncSuccess is an outgoing message containing the successful repsonse to
+// AsyncSuccess is an outgoing message containing the successful response to
 // a synchronous call.
 type AsyncSuccess struct {
 	Session uint16
@@ -69,7 +69,7 @@ func (m *AsyncSuccess) write(w io.Writer, e Encoding) (err error) {
 	return
 }
 
-// AsyncFailure is an outgoing message containing a failure repsonse to
+// AsyncFailure is an outgoing message containing a failure response to
 // a synchronous call.
 type AsyncFailure struct {
 	Session uint16
@@ -99,7 +99,7 @@ func (m *AsyncFailure) write(w io.Writer, e Encoding) (err error) {
 	return
 }
 
-// AsyncError is an outgoing message containing a failure repsonse to
+// AsyncError is an outgoing message containing a failure response to
 // a synchronous call.
 type AsyncError struct {
 	Session uint16

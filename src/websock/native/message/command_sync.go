@@ -42,7 +42,7 @@ func (m *SyncCall) read(r io.Reader, e Encoding) (err error) {
 	return
 }
 
-// SyncSuccess is an outgoing message containing the successful repsonse to
+// SyncSuccess is an outgoing message containing the successful response to
 // a synchronous call.
 type SyncSuccess struct {
 	Session uint16
@@ -69,7 +69,7 @@ func (m *SyncSuccess) write(w io.Writer, e Encoding) (err error) {
 	return
 }
 
-// SyncFailure is an outgoing message containing a failure repsonse to
+// SyncFailure is an outgoing message containing a failure response to
 // a synchronous call.
 type SyncFailure struct {
 	Session uint16
@@ -98,7 +98,7 @@ func (m *SyncFailure) write(w io.Writer, e Encoding) (err error) {
 	return
 }
 
-// SyncError is an outgoing message containing a failure repsonse to
+// SyncError is an outgoing message containing a failure response to
 // a synchronous call.
 type SyncError struct {
 	Session uint16
