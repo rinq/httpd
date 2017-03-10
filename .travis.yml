@@ -8,5 +8,5 @@ matrix:
   - go: tip
 # services:
 #   - rabbitmq
-script: make ci
+script: make ci -j 4
 after_script: bash <(curl -s https://codecov.io/bash)
