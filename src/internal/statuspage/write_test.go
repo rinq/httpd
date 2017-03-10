@@ -63,7 +63,7 @@ var _ = Describe("WriteMessage", func() {
 		Expect(h).To(Equal("custom-message"))
 	})
 
-	It("renders HTML if Accept header prioritises it", func() {
+	It("renders HTML if Accept header prioritizes it", func() {
 		request.Header = http.Header{}
 		request.Header.Add("Accept", "text/html;q=0.9,*/*;q=0.8")
 		WriteMessage(response, request, http.StatusNotFound, "")
@@ -72,7 +72,7 @@ var _ = Describe("WriteMessage", func() {
 		Expect(h).To(ContainSubstring("text/html"))
 	})
 
-	It("renders text if Accept header prioritises it", func() {
+	It("renders text if Accept header prioritizes it", func() {
 		request.Header = http.Header{}
 		request.Header.Add("Accept", "text/html;q=0.8,text/plain;q=0.9*/*;q=0.7")
 		WriteMessage(response, request, http.StatusNotFound, "")

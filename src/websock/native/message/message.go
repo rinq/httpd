@@ -42,7 +42,7 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 		case sessionDestroyType:
 			msg = &SessionDestroy{}
 		default:
-			err = fmt.Errorf("unrecognised incoming message type: 0x%04x", mt)
+			err = fmt.Errorf("unrecognized incoming message type: 0x%04x", mt)
 			return
 		}
 

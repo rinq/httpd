@@ -23,7 +23,7 @@ type Encoding interface {
 var (
 	// CBOREncoding is an Encoding implementation that uses CBOR, Rinq's native
 	// application payload format. Application payloads do not need to be
-	// marshalled for transmission over the WebSocket, they are passed directly
+	// marshaled for transmission over the WebSocket, they are passed directly
 	// between the client and Rinq.
 	CBOREncoding Encoding
 

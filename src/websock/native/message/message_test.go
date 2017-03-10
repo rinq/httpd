@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("Read", func() {
-	It("returns an error if the message type is unrecognised", func() {
+	It("returns an error if the message type is unrecognized", func() {
 		r := strings.NewReader("XX")
 		_, err := Read(r, nil)
 
