@@ -8,13 +8,13 @@ import (
 )
 
 // Write outputs an HTTP status page for code c to w, in response to r.
-func Write(w http.ResponseWriter, r *http.Request, c int) (n int64, err error) {
-	return WriteMessage(w, r, c, Message(c))
+func Write(w http.ResponseWriter, r *http.Request, c int) {
+	WriteMessage(w, r, c, Message(c))
 }
 
 // WriteMessage outputs an HTTP status page for code c to w, in response to r,
 // with a custom message m.
-func WriteMessage(w http.ResponseWriter, r *http.Request, c int, m string) (int64, error) {
+func WriteMessage(w http.ResponseWriter, r *http.Request, c int, m string) {
 	var buf bytes.Buffer
 	var contentType string
 	context := context{c, http.StatusText(c), m}
@@ -30,14 +30,14 @@ func WriteMessage(w http.ResponseWriter, r *http.Request, c int, m string) (int6
 		buf.Reset()
 
 		if err := textTemplate.Execute(&buf, context); err != nil {
-			return 0, err
+			panic(err) // template is not renderable
 		}
 	}
 
 	w.Header().Add("Content-Type", contentType+"; charset=utf-8")
 	w.Header().Add("X-Status-Message", m)
 	w.WriteHeader(c)
-	return buf.WriteTo(w)
+	buf.WriteTo(w)
 }
 
 // context holds the data needed to render a status page.
