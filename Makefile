@@ -4,7 +4,7 @@ DOCKER_REPO ?= rinq/httpd
 
 .PHONY: run
 run: artifacts/build/debug/$(GOOS)/$(GOARCH)/rinq-httpd
-	RINQ_BIND=":8081" RINQ_ORIGIN="*" "$<"
+	RINQ_HTTPD_BIND=":8081" RINQ_HTTPD_ORIGIN="*" "$<"
 
 .PHONY: run-echo-server
 run-echo-server: artifacts/build/debug/$(GOOS)/$(GOARCH)/echo-server
