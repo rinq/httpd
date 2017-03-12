@@ -1,5 +1,6 @@
 DOCKER_REPO ?= rinq/httpd
 
+SHELL := /bin/bash
 -include artifacts/make/go.mk
 
 .PHONY: run
@@ -11,4 +12,4 @@ run-echo-server: artifacts/build/debug/$(GOOS)/$(GOARCH)/echo-server
 	"$<"
 
 artifacts/make/%.mk:
-	@curl --create-dirs '-#Lo' "$@" "https://rinq.github.io/make/$*.mk?nonce=$(shell date +%s)"
+	bash <(curl -s https://rinq.github.io/make/install) $@
