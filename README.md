@@ -7,7 +7,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/rinq/httpd)](https://goreportcard.com/report/github.com/rinq/httpd)
 [![Docker Pulls](https://img.shields.io/docker/pulls/rinq/httpd.svg)](https://hub.docker.com/r/rinq/httpd/)
 
-[Rinq](https://rinq.io) is a cross-language command bus and distributed ephemeral data store.
+[Rinq](http://rinq.io) is a cross-language command bus and distributed ephemeral data store.
 
 The Rinq HTTP daemon makes Rinq services available via HTTP and WebSockets.
 
