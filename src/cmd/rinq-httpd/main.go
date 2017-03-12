@@ -13,6 +13,7 @@ import (
 	"github.com/rinq/httpd/src/internal/statuspage"
 	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native"
+	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 	"github.com/rinq/rinq-go/src/rinq/amqp"
 )
@@ -29,9 +30,7 @@ func main() {
 			if websocket.IsWebSocketUpgrade(r) {
 				ws.ServeHTTP(w, r)
 			} else {
-				if _, err := statuspage.Write(w, r, http.StatusUpgradeRequired); err != nil {
-					fmt.Println(err) // TODO: log
-				}
+				statuspage.Write(w, r, http.StatusUpgradeRequired)
 			}
 		}),
 	}
@@ -87,15 +86,17 @@ func serve(server *http.Server, c chan<- error) {
 }
 
 func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {
-	return websock.NewHandler(
-		os.Getenv("RINQ_HTTPD_ORIGIN"),
-		websock.NewProtocolSet(
-			native.NewProtocol(
-				peer,
-				pingInterval(),
-			),
-		),
+	return websock.NewHTTPHandler(
+		func() (rinq.Peer, bool) {
+			return peer, true // TODO
+		},
+		websock.Config{
+			OriginPattern: os.Getenv("RINQ_HTTPD_ORIGIN"),
+			PingInterval:  pingInterval(),
+		},
 		logger,
+		&native.Handler{Encoding: message.CBOREncoding, Logger: logger},
+		&native.Handler{Encoding: message.JSONEncoding, Logger: logger},
 	)
 }
 

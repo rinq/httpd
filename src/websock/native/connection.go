@@ -3,186 +3,44 @@ package native
 import (
 	"context"
 	"fmt"
-	"time"
+	"log"
 
-	"github.com/gorilla/websocket"
-	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 	"github.com/rinq/rinq-go/src/rinq/ident"
 )
 
 type connection struct {
-	peer     rinq.Peer
-	ping     time.Duration
-	socket   websock.Socket
-	encoding message.Encoding
+	peer   rinq.Peer
+	send   func(message.Outgoing)
+	logger *log.Logger
 
-	incoming  chan message.Incoming
-	outgoing  chan message.Outgoing
-	destroyed chan uint16
-	quit      chan error
 	done      chan struct{}
-
-	sessions map[uint16]rinq.Session
+	destroyed chan uint16
+	sessions  map[uint16]rinq.Session
 }
 
 func newConnection(
 	peer rinq.Peer,
-	ping time.Duration,
-	socket websock.Socket,
-	encoding message.Encoding,
+	send func(message.Outgoing),
+	logger *log.Logger,
 ) *connection {
 	return &connection{
-		peer:     peer,
-		ping:     ping,
-		socket:   socket,
-		encoding: encoding,
+		peer:   peer,
+		send:   send,
+		logger: logger,
 
-		incoming:  make(chan message.Incoming),
-		outgoing:  make(chan message.Outgoing),
-		destroyed: make(chan uint16),
-		quit:      make(chan error),
 		done:      make(chan struct{}),
-
-		sessions: map[uint16]rinq.Session{},
+		destroyed: make(chan uint16),
+		sessions:  map[uint16]rinq.Session{},
 	}
 }
 
-func (c *connection) Run() error {
-	go c.read()
+func (c *connection) Close() {
+	close(c.done)
 
-	defer close(c.done)
-
-	ping := time.NewTicker(c.ping)
-	defer ping.Stop()
-
-	for {
-		select {
-		case msg := <-c.incoming:
-			if err := msg.Accept(c); err != nil {
-				return err
-			}
-
-		case msg := <-c.outgoing:
-			if err := c.send(msg); err != nil {
-				return err
-			}
-
-		case <-ping.C:
-			if err := c.socket.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return err
-			}
-
-		case index := <-c.destroyed:
-			if _, ok := c.sessions[index]; ok {
-				delete(c.sessions, index)
-
-				msg := &message.SessionDestroy{Session: index}
-				if err := c.send(msg); err != nil {
-					return err
-				}
-			}
-
-		case err := <-c.quit:
-			return err
-		}
-	}
-}
-
-func (c *connection) pong(string) error {
-	deadline := time.Now().Add(c.ping * 2)
-	return c.socket.SetReadDeadline(deadline)
-}
-
-func (c *connection) read() {
-	c.socket.SetPongHandler(c.pong)
-
-	if err := c.pong(""); err != nil {
-		c.stop(err)
-		return
-	}
-
-	for {
-		_, r, err := c.socket.NextReader()
-		if err != nil {
-			c.stop(err)
-			return
-		}
-
-		msg, err := message.Read(r, c.encoding)
-		if err != nil {
-			c.stop(err)
-			return
-		}
-
-		select {
-		case c.incoming <- msg:
-		case <-c.done:
-			return
-		}
-	}
-}
-
-func (c *connection) stop(err error) {
-	select {
-	case c.quit <- err:
-	case <-c.done:
-	}
-}
-
-// send writes a message to the client. It is NOT thread-safe, it must only
-// be called from the goroutine running the connections' main loop.
-func (c *connection) send(msg message.Outgoing) error {
-	w, err := c.socket.NextWriter(websocket.BinaryMessage)
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-
-	return message.Write(w, c.encoding, msg)
-}
-
-// enqueue queues a message to be sent to the client. It may be called from
-// any goroutine.
-func (c *connection) enqueue(msg message.Outgoing) {
-	select {
-	case c.outgoing <- msg:
-	case <-c.done:
-	}
-}
-
-// monitor waits for a session to be destroyed, then enqueues its removal from
-// the session map.
-func (c *connection) monitor(index uint16, sess rinq.Session) {
-	select {
-	case <-c.done:
-		return
-	case <-sess.Done():
-	}
-
-	select {
-	case c.destroyed <- index:
-	case <-c.done:
-	}
-}
-
-func (c *connection) notificationHandler(index uint16) rinq.NotificationHandler {
-	return func(_ context.Context, _ rinq.Session, n rinq.Notification) {
-		m := message.NewNotification(index, n)
-		c.enqueue(m)
-	}
-}
-
-func (c *connection) asyncHandler(index uint16) rinq.AsyncHandler {
-	return func(
-		_ context.Context, _ rinq.Session, _ ident.MessageID,
-		ns, cmd string,
-		p *rinq.Payload, err error,
-	) {
-		if m, ok := message.NewAsyncResponse(index, ns, cmd, p, err); ok {
-			c.enqueue(m)
-		}
+	for _, sess := range c.sessions {
+		sess.Destroy()
 	}
 }
 
@@ -193,11 +51,11 @@ func (c *connection) VisitSessionCreate(m *message.SessionCreate) error {
 
 	sess := c.peer.Session()
 
-	if err := sess.Listen(c.notificationHandler(m.Session)); err != nil {
+	if err := sess.Listen(newNotificationHandler(c.send, m.Session)); err != nil {
 		return err
 	}
 
-	if err := sess.SetAsyncHandler(c.asyncHandler(m.Session)); err != nil {
+	if err := sess.SetAsyncHandler(newAsyncHandler(c.send, m.Session)); err != nil {
 		return err
 	}
 
@@ -228,7 +86,7 @@ func (c *connection) VisitSyncCall(m *message.SyncCall) error {
 			)
 
 			if m, ok := message.NewSyncResponse(m.Session, m.Header.Seq, p, err); ok {
-				c.enqueue(m)
+				c.send(m)
 			}
 		}()
 
@@ -264,4 +122,39 @@ func (c *connection) VisitExecute(m *message.Execute) error {
 	}
 
 	return fmt.Errorf("session %d does not exist", m.Session)
+}
+
+// monitor waits for a session to be destroyed, then enqueues its removal from
+// the session map.
+func (c *connection) monitor(index uint16, sess rinq.Session) {
+	select {
+	case <-sess.Done():
+		select {
+		case c.destroyed <- index:
+		case <-c.done:
+		}
+	case <-c.done:
+	}
+}
+
+// newNotificationHandler returns a rinq.NotificationHandler that sends a
+// message when a notification is received.
+func newNotificationHandler(send func(message.Outgoing), index uint16) rinq.NotificationHandler {
+	return func(_ context.Context, _ rinq.Session, n rinq.Notification) {
+		send(message.NewNotification(index, n))
+	}
+}
+
+// newAsyncHandler returns a rinq.AsyncHandler that sends a message when an
+// async response is received.
+func newAsyncHandler(send func(message.Outgoing), index uint16) rinq.AsyncHandler {
+	return func(
+		_ context.Context, _ rinq.Session, _ ident.MessageID,
+		ns, cmd string,
+		p *rinq.Payload, err error,
+	) {
+		if m, ok := message.NewAsyncResponse(index, ns, cmd, p, err); ok {
+			send(m)
+		}
+	}
 }

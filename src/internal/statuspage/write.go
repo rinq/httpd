@@ -37,7 +37,8 @@ func WriteMessage(w http.ResponseWriter, r *http.Request, c int, m string) {
 	w.Header().Add("Content-Type", contentType+"; charset=utf-8")
 	w.Header().Add("X-Status-Message", m)
 	w.WriteHeader(c)
-	buf.WriteTo(w)
+
+	_, _ = buf.WriteTo(w)
 }
 
 // context holds the data needed to render a status page.

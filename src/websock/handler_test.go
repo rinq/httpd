@@ -12,29 +12,40 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/rinq/httpd/src/websock"
+	"github.com/rinq/rinq-go/src/rinq"
 )
 
-var _ = Describe("Handler", func() {
+var _ = Describe("httpHandler", func() {
 	var (
-		protoA, protoB *mockProtocol
-		protos         *ProtocolSet
-		logger         *log.Logger
+		handlerA, handlerB *mockHandler
+		peer               rinq.Peer
+		config             Config
+		logger             *log.Logger
 
 		request  *http.Request
 		response responseRecorder
 
-		subject *Handler
+		subject http.Handler
 	)
 
 	BeforeEach(func() {
-		protoA = &mockProtocol{name: "proto-a"}
-		protoB = &mockProtocol{name: "proto-b"}
-		protos = NewProtocolSet(protoA, protoB)
+		handlerA = &mockHandler{protocol: "proto-a"}
+		handlerB = &mockHandler{protocol: "proto-b"}
+
+		peer = &mockPeer{}
 
 		request = httptest.NewRequest("GET", "/", nil)
 		response = responseRecorder{httptest.NewRecorder()}
 
-		subject = NewHandler("*", protos, logger)
+		subject = NewHTTPHandler(
+			func() (rinq.Peer, bool) {
+				return peer, true
+			},
+			config,
+			logger,
+			handlerA,
+			handlerB,
+		)
 	})
 
 	It("dispatches with the correct protocol", func() {
@@ -47,8 +58,11 @@ var _ = Describe("Handler", func() {
 
 		subject.ServeHTTP(response, request)
 
-		Expect(protoA.handleCalled).To(BeFalse())
-		Expect(protoB.handleCalled).To(BeTrue())
+		Expect(handlerA.called).To(BeFalse())
+		Expect(handlerB.called).To(BeTrue())
+
+		Expect(handlerB.peer).To(Equal(peer))
+		Expect(handlerB.config).To(Equal(&config))
 	})
 
 	It("renders an error page when the request is not an upgrade", func() {
@@ -57,7 +71,28 @@ var _ = Describe("Handler", func() {
 		Expect(response.Code).To(Equal(http.StatusBadRequest))
 		Expect(response.Body).To(ContainSubstring("Bad Request"))
 	})
+
+	It("renders an error page when the peer is not available", func() {
+		subject = NewHTTPHandler(
+			func() (rinq.Peer, bool) {
+				return nil, false
+			},
+			config,
+			logger,
+			handlerA,
+			handlerB,
+		)
+
+		subject.ServeHTTP(response, request)
+
+		Expect(response.Code).To(Equal(http.StatusServiceUnavailable))
+		Expect(response.Body).To(ContainSubstring("Service Unavailable"))
+	})
 })
+
+type mockPeer struct {
+	rinq.Peer
+}
 
 type mockConnection struct {
 	net.Conn
@@ -77,10 +112,19 @@ func (responseRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return &mockConnection{}, bufio.NewReadWriter(r, w), nil
 }
 
-type mockProtocol struct {
-	name         string
-	handleCalled bool
+type mockHandler struct {
+	protocol string
+	called   bool
+	peer     rinq.Peer
+	config   *Config
 }
 
-func (p *mockProtocol) Names() []string { return []string{p.name} }
-func (p *mockProtocol) Handle(Socket)   { p.handleCalled = true }
+func (h *mockHandler) Protocol() string {
+	return h.protocol
+}
+
+func (h *mockHandler) Handle(s Socket, p rinq.Peer, c Config) {
+	h.called = true
+	h.peer = p
+	h.config = &c
+}
