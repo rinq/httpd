@@ -41,12 +41,5 @@ func (m *SessionDestroy) read(r io.Reader, e Encoding) (err error) {
 }
 
 func (m *SessionDestroy) write(w io.Writer, e Encoding) (err error) {
-	err = writePreamble(w, sessionDestroyType, m.Session)
-
-	if err == nil {
-		// empty header size
-		_, err = w.Write([]byte{0, 0})
-	}
-
-	return
+	return writePreamble(w, sessionDestroyType, m.Session)
 }

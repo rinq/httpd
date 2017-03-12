@@ -14,6 +14,7 @@ import (
 // Encoding is an interface for a structured data encoder/decoder used to
 // serialize message headers and application payloads.
 type Encoding interface {
+	Name() string
 	EncodeHeader(w io.Writer, h interface{}) error
 	DecodeHeader(r io.Reader, h interface{}) error
 	EncodePayload(w io.Writer, p *rinq.Payload) error
@@ -78,7 +79,10 @@ func init() {
 	{
 		headerHandle := &codec.CborHandle{}
 		headerHandle.StructToArray = true
-		CBOREncoding = &nativeEncoding{headerEncoding{headerHandle}}
+		CBOREncoding = &nativeEncoding{
+			headerEncoding{headerHandle},
+			"cbor",
+		}
 	}
 
 	{
@@ -87,6 +91,7 @@ func init() {
 		JSONEncoding = &foreignEncoding{
 			headerEncoding{headerHandle},
 			&codec.JsonHandle{},
+			"json",
 		}
 	}
 }

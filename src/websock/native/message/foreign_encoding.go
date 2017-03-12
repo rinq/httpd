@@ -14,6 +14,11 @@ import (
 type foreignEncoding struct {
 	headerEncoding
 	handle codec.Handle
+	name   string
+}
+
+func (e *foreignEncoding) Name() string {
+	return e.name
 }
 
 func (e *foreignEncoding) EncodePayload(w io.Writer, p *rinq.Payload) error {

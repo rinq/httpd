@@ -31,6 +31,12 @@ var _ = Describe("foreignEncoding / JSONEncoding", func() {
 		payloadValue = testPayload{456, "def"}
 	})
 
+	Describe("Name", func() {
+		It("returns the encoding name", func() {
+			Expect(subject.Name()).To(Equal("json"))
+		})
+	})
+
 	Describe("EncodeHeader", func() {
 		It("encodes the header as an array", func() {
 			var buf bytes.Buffer

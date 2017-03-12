@@ -73,7 +73,6 @@ var _ = Describe("SessionDestroy", func() {
 			expected := []byte{
 				'S', 'D',
 				0xab, 0xcd, // session index
-				0, 0, // header size
 			}
 			Expect(buf.Bytes()).To(Equal(expected))
 		})

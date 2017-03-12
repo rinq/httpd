@@ -33,6 +33,12 @@ var _ = Describe("nativeEncoding / CBOREncoding", func() {
 		payloadValue = testPayload{456, "def"}
 	})
 
+	Describe("Name", func() {
+		It("returns cbor", func() {
+			Expect(subject.Name()).To(Equal("cbor"))
+		})
+	})
+
 	Describe("EncodeHeader", func() {
 		It("encodes the header as an array", func() {
 			var buf bytes.Buffer

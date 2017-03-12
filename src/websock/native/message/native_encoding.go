@@ -14,6 +14,11 @@ import (
 // directly to Rinq.
 type nativeEncoding struct {
 	headerEncoding
+	name string
+}
+
+func (e *nativeEncoding) Name() string {
+	return e.name
 }
 
 func (e *nativeEncoding) EncodePayload(w io.Writer, p *rinq.Payload) error {
