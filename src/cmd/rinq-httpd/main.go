@@ -67,7 +67,7 @@ func connect() rinq.Peer {
 	for {
 		// TODO: this env var will be handled by rinq-go
 		// https://github.com/rinq/rinq-go/issues/94
-		peer, err := amqp.Dial(os.Getenv("RING_AMQP_DSN"))
+		peer, err := amqp.Dial(os.Getenv("RINQ_AMQP_DSN"))
 		if err == nil {
 			return peer
 		}
