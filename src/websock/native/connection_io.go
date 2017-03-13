@@ -15,14 +15,15 @@ type connectionIO struct {
 	encoding message.Encoding
 	ping     time.Duration
 
-	recv chan message.Incoming
-	send chan message.Outgoing
-	stop chan struct{}
-	done chan struct{}
-	err  atomic.Value
+	recv     chan message.Incoming
+	recvDone chan struct{}
+	send     chan message.Outgoing
+	sendDone chan struct{}
+
+	err atomic.Value
 }
 
-func newIO(
+func newConnectionIO(
 	s websock.Socket,
 	e message.Encoding,
 	ping time.Duration,
@@ -32,10 +33,10 @@ func newIO(
 		encoding: e,
 		ping:     ping,
 
-		recv: make(chan message.Incoming),
-		send: make(chan message.Outgoing),
-		stop: make(chan struct{}, 1),
-		done: make(chan struct{}),
+		recv:     make(chan message.Incoming),
+		recvDone: make(chan struct{}),
+		send:     make(chan message.Outgoing),
+		sendDone: make(chan struct{}),
 	}
 
 	s.SetPongHandler(i.pong)
@@ -46,16 +47,10 @@ func newIO(
 	return i
 }
 
-func (i *connectionIO) Stop() {
-	select {
-	case i.stop <- struct{}{}:
-	default:
-	}
+func (i *connectionIO) Wait() error {
+	<-i.sendDone
+	<-i.recvDone
 
-	<-i.done
-}
-
-func (i *connectionIO) Err() error {
 	err, _ := i.err.Load().(error)
 	return err
 }
@@ -69,14 +64,14 @@ func (i *connectionIO) Messages() <-chan message.Incoming {
 func (i *connectionIO) Send(msg message.Outgoing) {
 	select {
 	case i.send <- msg:
-	case <-i.done:
+	case <-i.sendDone:
 	}
 }
 
 // read reads messages from the websocket and writes them to the recv channel.
 func (i *connectionIO) read() {
-	defer i.Stop()
 	defer close(i.recv)
+	defer close(i.recvDone)
 
 	err := i.pong("")
 
@@ -88,7 +83,7 @@ func (i *connectionIO) read() {
 			select {
 			case i.recv <- msg:
 				err = i.pong("")
-			case <-i.stop:
+			case <-i.sendDone:
 				return
 			}
 		}
@@ -98,9 +93,7 @@ func (i *connectionIO) read() {
 }
 
 func (i *connectionIO) write() {
-	defer i.Stop()
-
-	defer close(i.done)
+	defer close(i.sendDone)
 
 	ticker := time.NewTicker(i.ping)
 	defer ticker.Stop()
@@ -112,7 +105,7 @@ func (i *connectionIO) write() {
 			err = write(i.socket, i.encoding, msg)
 		case <-ticker.C:
 			err = i.socket.WriteMessage(websocket.PingMessage, nil)
-		case <-i.stop:
+		case <-i.recvDone:
 			return
 		}
 	}

@@ -31,9 +31,7 @@ func (h *Handler) Handle(
 	p rinq.Peer,
 	a []rinq.Attr,
 ) {
-	io := newIO(s, h.Encoding, c.PingInterval)
-	defer io.Stop()
-
+	io := newConnectionIO(s, h.Encoding, c.PingInterval)
 	con := newConnection(p, a, io.Send, h.Logger)
 	defer con.Close()
 
@@ -44,7 +42,7 @@ func (h *Handler) Handle(
 		}
 	}
 
-	if err := io.Err(); err != nil {
+	if err := io.Wait(); err != nil {
 		fmt.Println(err) // TODO: log
 		return
 	}
