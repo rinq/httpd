@@ -32,7 +32,7 @@ func (h *Handler) Handle(
 	a []rinq.Attr,
 ) {
 	io := newConnectionIO(s, h.Encoding, c.PingInterval)
-	con := newConnection(p, a, io.Send, h.Logger)
+	con := newConnection(newSessionFactory(p, a), io.Send, h.Logger)
 	defer con.Close()
 
 	for msg := range io.Messages() {
