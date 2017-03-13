@@ -78,6 +78,15 @@ var _ = Describe("foreignEncoding / JSONEncoding", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(buf.Bytes()).To(Equal(payloadBytes))
 		})
+
+		It("closes the payload", func() {
+			var buf bytes.Buffer
+			p := rinq.NewPayload(payloadValue)
+
+			subject.EncodePayload(&buf, p)
+
+			Expect(p.Value()).To(BeNil())
+		})
 	})
 
 	Describe("DecodePayload", func() {

@@ -22,6 +22,7 @@ func (e *nativeEncoding) Name() string {
 }
 
 func (e *nativeEncoding) EncodePayload(w io.Writer, p *rinq.Payload) error {
+	defer p.Close()
 	_, err := w.Write(p.Bytes())
 	return err
 }

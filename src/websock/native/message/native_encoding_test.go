@@ -74,11 +74,24 @@ var _ = Describe("nativeEncoding / CBOREncoding", func() {
 	Describe("EncodePayload", func() {
 		It("encodes the payload", func() {
 			var buf bytes.Buffer
+
 			p := rinq.NewPayload(payloadValue)
+			var expected bytes.Buffer
+			expected.Write(p.Bytes())
+
 			err := subject.EncodePayload(&buf, p)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(buf.Bytes()).To(Equal(p.Bytes()))
+			Expect(buf.Bytes()).To(Equal(expected.Bytes()))
+		})
+
+		It("closes the payload", func() {
+			var buf bytes.Buffer
+			p := rinq.NewPayload(payloadValue)
+
+			subject.EncodePayload(&buf, p)
+
+			Expect(p.Value()).To(BeNil())
 		})
 	})
 

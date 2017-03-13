@@ -22,6 +22,7 @@ func (e *foreignEncoding) Name() string {
 }
 
 func (e *foreignEncoding) EncodePayload(w io.Writer, p *rinq.Payload) error {
+	defer p.Close()
 	return codec.NewEncoder(w, e.handle).Encode(p.Value())
 }
 
