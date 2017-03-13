@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/golang/gddo/httputil/header"
 	"github.com/gorilla/websocket"
 	"github.com/rinq/httpd/src/internal/statuspage"
 	"github.com/rinq/rinq-go/src/rinq"
@@ -18,7 +19,7 @@ type Handler interface {
 	Protocol() string
 
 	// Handle takes control of a WebSocket connection until it is closed.
-	Handle(Socket, rinq.Peer, Config)
+	Handle(Socket, Config, rinq.Peer, []rinq.Attr)
 }
 
 // httpHandler is an http.Handler that negotiates a WebSocket upgrade and
@@ -81,8 +82,23 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer socket.Close()
 
 	if wsh, ok := h.handlers[socket.Subprotocol()]; ok {
-		wsh.Handle(socket, peer, h.config)
+		wsh.Handle(socket, h.config, peer, sessionAttributes(r))
 	} else {
 		fmt.Println("unsupported sub-protocol") // TODO: log, pull from headers
+	}
+}
+
+// sessionAttributes returns the set of attributes to apply to new sessions for
+// the given request.
+func sessionAttributes(r *http.Request) []rinq.Attr {
+	remoteAddr := r.RemoteAddr
+	for _, ip := range header.ParseList(r.Header, "X-Forwarded-For") {
+		remoteAddr = ip
+		break
+	}
+
+	return []rinq.Attr{
+		rinq.Freeze("rinq.httpd.remote-addr", remoteAddr),
+		rinq.Freeze("rinq.httpd.host", r.Host),
 	}
 }

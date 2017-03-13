@@ -123,7 +123,7 @@ func (h *mockHandler) Protocol() string {
 	return h.protocol
 }
 
-func (h *mockHandler) Handle(s Socket, p rinq.Peer, c Config) {
+func (h *mockHandler) Handle(s Socket, c Config, p rinq.Peer, a []rinq.Attr) {
 	h.called = true
 	h.peer = p
 	h.config = &c

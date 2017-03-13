@@ -12,6 +12,7 @@ import (
 
 type connection struct {
 	peer   rinq.Peer
+	attrs  []rinq.Attr
 	send   func(message.Outgoing)
 	logger *log.Logger
 
@@ -22,11 +23,13 @@ type connection struct {
 
 func newConnection(
 	peer rinq.Peer,
+	attrs []rinq.Attr,
 	send func(message.Outgoing),
 	logger *log.Logger,
 ) *connection {
 	return &connection{
 		peer:   peer,
+		attrs:  attrs,
 		send:   send,
 		logger: logger,
 
@@ -44,25 +47,39 @@ func (c *connection) Close() {
 	}
 }
 
-func (c *connection) VisitSessionCreate(m *message.SessionCreate) error {
+func (c *connection) VisitSessionCreate(m *message.SessionCreate) (err error) {
 	if _, ok := c.sessions[m.Session]; ok {
 		return fmt.Errorf("session %d already exists", m.Session)
 	}
 
 	sess := c.peer.Session()
 
-	if err := sess.Listen(newNotificationHandler(c.send, m.Session)); err != nil {
-		return err
+	defer func() {
+		if err == nil {
+			c.sessions[m.Session] = sess
+			go c.monitor(m.Session, sess)
+		} else {
+			sess.Destroy()
+		}
+	}()
+
+	rev, err := sess.CurrentRevision()
+	if err != nil {
+		return
 	}
 
-	if err := sess.SetAsyncHandler(newAsyncHandler(c.send, m.Session)); err != nil {
-		return err
+	_, err = rev.Update(context.Background(), c.attrs...)
+	if err != nil {
+		return
 	}
 
-	c.sessions[m.Session] = sess
-	go c.monitor(m.Session, sess)
+	err = sess.Listen(newNotificationHandler(c.send, m.Session))
+	if err != nil {
+		return
+	}
 
-	return nil
+	err = sess.SetAsyncHandler(newAsyncHandler(c.send, m.Session))
+	return
 }
 
 func (c *connection) VisitSessionDestroy(m *message.SessionDestroy) error {

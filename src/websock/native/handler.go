@@ -25,11 +25,16 @@ func (h *Handler) Protocol() string {
 }
 
 // Handle takes control of WebSocket connection until it is closed.
-func (h *Handler) Handle(s websock.Socket, p rinq.Peer, c websock.Config) {
+func (h *Handler) Handle(
+	s websock.Socket,
+	c websock.Config,
+	p rinq.Peer,
+	a []rinq.Attr,
+) {
 	io := newIO(s, h.Encoding, c.PingInterval)
 	defer io.Stop()
 
-	con := newConnection(p, io.Send, h.Logger)
+	con := newConnection(p, a, io.Send, h.Logger)
 	defer con.Close()
 
 	for msg := range io.Messages() {
