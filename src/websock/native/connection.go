@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
@@ -15,9 +16,11 @@ type connection struct {
 	send    func(message.Outgoing)
 	logger  *log.Logger
 
-	done      chan struct{}
-	destroyed chan uint16
-	sessions  map[uint16]rinq.Session
+	parent context.Context
+	cancel func()
+
+	mutex    sync.RWMutex
+	sessions map[uint16]rinq.Session
 }
 
 func newConnection(
@@ -25,26 +28,30 @@ func newConnection(
 	send func(message.Outgoing),
 	logger *log.Logger,
 ) *connection {
-	return &connection{
-		session: session,
-		send:    send,
-		logger:  logger,
-
-		done:      make(chan struct{}),
-		destroyed: make(chan uint16),
-		sessions:  map[uint16]rinq.Session{},
+	c := &connection{
+		session:  session,
+		send:     send,
+		logger:   logger,
+		sessions: map[uint16]rinq.Session{},
 	}
+
+	c.parent, c.cancel = context.WithCancel(context.Background())
+
+	return c
 }
 
 func (c *connection) Close() {
-	close(c.done)
+	c.cancel()
 
 	for _, sess := range c.sessions {
-		sess.Destroy()
+		go sess.Destroy()
 	}
 }
 
 func (c *connection) VisitSessionCreate(m *message.SessionCreate) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	if _, ok := c.sessions[m.Session]; ok {
 		return fmt.Errorf("session %d already exists", m.Session)
 	}
@@ -62,10 +69,14 @@ func (c *connection) VisitSessionCreate(m *message.SessionCreate) error {
 
 	c.sessions[m.Session] = sess
 	go c.monitor(m.Session, sess)
+
 	return nil
 }
 
 func (c *connection) VisitSessionDestroy(m *message.SessionDestroy) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	if sess, ok := c.sessions[m.Session]; ok {
 		delete(c.sessions, m.Session)
 		go sess.Destroy()
@@ -76,52 +87,71 @@ func (c *connection) VisitSessionDestroy(m *message.SessionDestroy) error {
 }
 
 func (c *connection) VisitSyncCall(m *message.SyncCall) error {
-	if sess, ok := c.sessions[m.Session]; ok {
-		go func() {
-			p, err := sess.Call(
-				context.TODO(), // needs timeout
-				m.Header.Namespace,
-				m.Header.Command,
-				m.Payload,
-			)
-
-			if m, ok := message.NewSyncResponse(m.Session, m.Header.Seq, p, err); ok {
-				c.send(m)
-			}
-		}()
-
-		return nil
+	sess, ok := c.getSession(m.Session)
+	if !ok {
+		return fmt.Errorf("session %d does not exist", m.Session)
 	}
 
-	return fmt.Errorf("session %d does not exist", m.Session)
+	go c.call(sess, m)
+
+	return nil
 }
 
 func (c *connection) VisitAsyncCall(m *message.AsyncCall) error {
-	if sess, ok := c.sessions[m.Session]; ok {
-		_, err := sess.CallAsync(
-			context.TODO(), // needs timeout
-			m.Header.Namespace,
-			m.Header.Command,
-			m.Payload,
-		)
-
-		return err
+	sess, ok := c.getSession(m.Session)
+	if !ok {
+		return fmt.Errorf("session %d does not exist", m.Session)
 	}
 
-	return fmt.Errorf("session %d does not exist", m.Session)
+	ctx, cancel := context.WithTimeout(c.parent, m.Header.Timeout)
+	defer cancel()
+
+	_, err := sess.CallAsync(
+		ctx,
+		m.Header.Namespace,
+		m.Header.Command,
+		m.Payload,
+	)
+
+	return err
 }
 
 func (c *connection) VisitExecute(m *message.Execute) error {
-	if sess, ok := c.sessions[m.Session]; ok {
-		return sess.Execute(
-			context.Background(),
-			m.Header.Namespace,
-			m.Header.Command,
-			m.Payload,
-		)
+	sess, ok := c.getSession(m.Session)
+	if !ok {
+		return fmt.Errorf("session %d does not exist", m.Session)
 	}
 
-	return fmt.Errorf("session %d does not exist", m.Session)
+	return sess.Execute(
+		context.Background(),
+		m.Header.Namespace,
+		m.Header.Command,
+		m.Payload,
+	)
+}
+
+func (c *connection) getSession(index uint16) (rinq.Session, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	sess, ok := c.sessions[index]
+	return sess, ok
+}
+
+func (c *connection) call(sess rinq.Session, m *message.SyncCall) {
+	ctx, cancel := context.WithTimeout(c.parent, m.Header.Timeout)
+	defer cancel()
+
+	p, err := sess.Call(
+		ctx,
+		m.Header.Namespace,
+		m.Header.Command,
+		m.Payload,
+	)
+
+	if m, ok := message.NewSyncResponse(m.Session, m.Header.Seq, p, err); ok {
+		c.send(m)
+	}
 }
 
 // monitor waits for a session to be destroyed, then enqueues its removal from
@@ -129,12 +159,20 @@ func (c *connection) VisitExecute(m *message.Execute) error {
 func (c *connection) monitor(index uint16, sess rinq.Session) {
 	select {
 	case <-sess.Done():
-		select {
-		case c.destroyed <- index:
-		case <-c.done:
-		}
-	case <-c.done:
+	case <-c.parent.Done():
+		return
 	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	_, ok := c.sessions[index]
+	if !ok {
+		return
+	}
+
+	delete(c.sessions, index)
+	c.send(&message.SessionDestroy{Session: index})
 }
 
 // registerHandlers sets up notification and async response handlers on a
