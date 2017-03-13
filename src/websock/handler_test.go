@@ -48,21 +48,59 @@ var _ = Describe("httpHandler", func() {
 		)
 	})
 
-	It("dispatches with the correct protocol", func() {
-		request.Header = http.Header{}
-		request.Header.Add("Connection", "upgrade")
-		request.Header.Add("Upgrade", "websocket")
-		request.Header.Add("Sec-Websocket-Version", "13")
-		request.Header.Add("Sec-Websocket-Key", "<key>")
-		request.Header.Add("Sec-Websocket-Protocol", "proto-b")
+	Context("when the request is a websocket", func() {
+		BeforeEach(func() {
+			request.Header = http.Header{}
+			request.Header.Add("Connection", "upgrade")
+			request.Header.Add("Upgrade", "websocket")
+			request.Header.Add("Sec-Websocket-Version", "13")
+			request.Header.Add("Sec-Websocket-Key", "<key>")
+			request.Header.Add("Sec-Websocket-Protocol", "proto-b")
+		})
 
-		subject.ServeHTTP(response, request)
+		It("dispatches to the correct websocket handler", func() {
+			subject.ServeHTTP(response, request)
 
-		Expect(handlerA.called).To(BeFalse())
-		Expect(handlerB.called).To(BeTrue())
+			Expect(handlerA.called).To(BeFalse())
+			Expect(handlerB.called).To(BeTrue())
 
-		Expect(handlerB.peer).To(Equal(peer))
-		Expect(handlerB.config).To(Equal(&config))
+			Expect(handlerB.peer).To(Equal(peer))
+			Expect(handlerB.config).To(Equal(&config))
+		})
+
+		It("supplies an attribute containing the host", func() {
+			subject.ServeHTTP(response, request)
+
+			Expect(handlerB.attrs).To(ContainElement(
+				rinq.Freeze("rinq.httpd.host", "example.com"),
+			))
+		})
+
+		It("supplies an attribute containing the remote address", func() {
+			subject.ServeHTTP(response, request)
+
+			Expect(handlerB.attrs).To(ContainElement(
+				rinq.Freeze("rinq.httpd.remote-addr", "192.0.2.1"),
+			))
+		})
+
+		It("supports remote addresses without ports", func() {
+			request.RemoteAddr = "192.0.2.2"
+			subject.ServeHTTP(response, request)
+
+			Expect(handlerB.attrs).To(ContainElement(
+				rinq.Freeze("rinq.httpd.remote-addr", "192.0.2.2"),
+			))
+		})
+
+		It("uses the X-Forwarded-For header when present", func() {
+			request.Header.Add("X-Forwarded-For", "10.1.1.1,10.2.2.2")
+			subject.ServeHTTP(response, request)
+
+			Expect(handlerB.attrs).To(ContainElement(
+				rinq.Freeze("rinq.httpd.remote-addr", "10.1.1.1"),
+			))
+		})
 	})
 
 	It("renders an error page when the request is not an upgrade", func() {
@@ -115,8 +153,9 @@ func (responseRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 type mockHandler struct {
 	protocol string
 	called   bool
-	peer     rinq.Peer
 	config   *Config
+	peer     rinq.Peer
+	attrs    []rinq.Attr
 }
 
 func (h *mockHandler) Protocol() string {
@@ -125,6 +164,7 @@ func (h *mockHandler) Protocol() string {
 
 func (h *mockHandler) Handle(s Socket, c Config, p rinq.Peer, a []rinq.Attr) {
 	h.called = true
-	h.peer = p
 	h.config = &c
+	h.peer = p
+	h.attrs = a
 }
