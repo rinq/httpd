@@ -3,7 +3,6 @@ package native
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"time"
 
@@ -48,13 +47,10 @@ var _ = Describe("connectionIO", func() {
 			return 0, nil, errors.New("<no more readers>")
 		}
 		socket.Impl.NextWriter = func(int) (io.WriteCloser, error) {
-			fmt.Println("waiting for writer")
 			if w, ok := <-writers; ok {
-				fmt.Println("got one")
 				return w, nil
 			}
 
-			fmt.Println("none left")
 			return nil, errors.New("<no more writers>")
 		}
 		socket.Impl.WriteMessage = func(mt int, body []byte) error {
@@ -70,6 +66,7 @@ var _ = Describe("connectionIO", func() {
 			recover()
 		}()
 		close(readers)
+		subject.Wait()
 	})
 
 	AfterEach(func() {
@@ -77,6 +74,7 @@ var _ = Describe("connectionIO", func() {
 			recover()
 		}()
 		close(writers)
+		subject.Wait()
 	})
 
 	Describe("Messages", func() {
