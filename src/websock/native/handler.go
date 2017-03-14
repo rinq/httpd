@@ -1,8 +1,9 @@
 package native
 
 import (
-	"fmt"
+	"context"
 	"log"
+	"net/http"
 
 	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native/message"
@@ -14,6 +15,7 @@ const protocolPrefix = "rinq-1.0+"
 // Handler is an implementation of websock.Handler that handles connections that
 // use Rinq's "native" subprotocol.
 type Handler struct {
+	Peer     rinq.Peer
 	Encoding message.Encoding
 	Logger   *log.Logger
 }
@@ -25,25 +27,36 @@ func (h *Handler) Protocol() string {
 }
 
 // Handle takes control of WebSocket connection until it is closed.
-func (h *Handler) Handle(
-	s websock.Socket,
-	c websock.Config,
-	p rinq.Peer,
-	a []rinq.Attr,
-) {
-	io := newConnectionIO(s, h.Encoding, c.PingInterval)
-	con := newConnection(newSessionFactory(p, a), io.Send, h.Logger)
-	defer con.Close()
+func (h *Handler) Handle(c websock.Connection, r *http.Request) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	for msg := range io.Messages() {
-		if err := msg.Accept(con); err != nil {
-			fmt.Println(err) // TODO: log
-			return
+	v := newVisitor(
+		ctx,
+		h.Peer,
+		sessionAttributes(r),
+		func(m message.Outgoing) {
+			if w, err := c.NextWriter(); err == nil {
+				defer w.Close()
+				_ = message.Write(w, h.Encoding, m)
+			}
+		},
+	)
+
+	for {
+		r, err := c.NextReader()
+		if err != nil {
+			return err
 		}
-	}
 
-	if err := io.Wait(); err != nil {
-		fmt.Println(err) // TODO: log
-		return
+		msg, err := message.Read(r, h.Encoding)
+		if err != nil {
+			return err
+		}
+
+		err = msg.Accept(v)
+		if err != nil {
+			return err
+		}
 	}
 }
