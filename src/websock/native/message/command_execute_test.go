@@ -1,4 +1,4 @@
-package message_test
+package message
 
 import (
 	"bytes"
@@ -6,7 +6,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
@@ -40,8 +39,8 @@ var _ = Describe("Execute", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expected := &Execute{
-				Session: 0xabcd,
-				Header: ExecuteHeader{
+				preamble: preamble{0xabcd},
+				executeHeader: executeHeader{
 					Namespace: "ns",
 					Command:   "cmd",
 				},

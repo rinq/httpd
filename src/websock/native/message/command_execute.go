@@ -8,13 +8,14 @@ import (
 
 // Execute is an incoming message representing a command execution request.
 type Execute struct {
-	Session uint16
-	Header  ExecuteHeader
+	preamble
+	executeHeader
+
 	Payload *rinq.Payload
 }
 
-// ExecuteHeader is the header structure for Execute messages.
-type ExecuteHeader struct {
+// executeHeader is the header structure for Execute messages.
+type executeHeader struct {
 	Namespace string
 	Command   string
 }
@@ -25,10 +26,10 @@ func (m *Execute) Accept(v Visitor) error {
 }
 
 func (m *Execute) read(r io.Reader, e Encoding) (err error) {
-	m.Session, err = readPreamble(r)
+	err = m.preamble.read(r)
 
 	if err == nil {
-		err = e.DecodeHeader(r, &m.Header)
+		err = e.DecodeHeader(r, &m.executeHeader)
 
 		if err == nil {
 			m.Payload, err = e.DecodePayload(r)

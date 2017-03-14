@@ -9,13 +9,14 @@ import (
 
 // SyncCall is an incoming message representing a synchronous command request.
 type SyncCall struct {
-	Session uint16
-	Header  SyncCallHeader
+	preamble
+	syncCallHeader
+
 	Payload *rinq.Payload
 }
 
-// SyncCallHeader is the header structure for SyncCall messages.
-type SyncCallHeader struct {
+// syncCallHeader is the header structure for SyncCall messages.
+type syncCallHeader struct {
 	Seq       uint
 	Namespace string
 	Command   string
@@ -28,11 +29,11 @@ func (m *SyncCall) Accept(v Visitor) error {
 }
 
 func (m *SyncCall) read(r io.Reader, e Encoding) (err error) {
-	m.Session, err = readPreamble(r)
+	err = m.preamble.read(r)
 
 	if err == nil {
-		err = e.DecodeHeader(r, &m.Header)
-		m.Header.Timeout *= time.Millisecond
+		err = e.DecodeHeader(r, &m.syncCallHeader)
+		m.syncCallHeader.Timeout *= time.Millisecond
 
 		if err == nil {
 			m.Payload, err = e.DecodePayload(r)
@@ -45,21 +46,22 @@ func (m *SyncCall) read(r io.Reader, e Encoding) (err error) {
 // SyncSuccess is an outgoing message containing the successful response to
 // a synchronous call.
 type SyncSuccess struct {
-	Session uint16
-	Header  SyncSuccessHeader
+	preamble
+	syncSuccessHeader
+
 	Payload *rinq.Payload
 }
 
-// SyncSuccessHeader is the header structure for SyncSuccess messages.
-type SyncSuccessHeader struct {
+// syncSuccessHeader is the header structure for SyncSuccess messages.
+type syncSuccessHeader struct {
 	Seq uint
 }
 
 func (m *SyncSuccess) write(w io.Writer, e Encoding) (err error) {
-	err = writePreamble(w, commandSyncSuccessType, m.Session)
+	err = m.preamble.write(w, commandSyncSuccessType)
 
 	if err == nil {
-		err = e.EncodeHeader(w, m.Header)
+		err = e.EncodeHeader(w, m.syncSuccessHeader)
 
 		if err == nil {
 			err = e.EncodePayload(w, m.Payload)
@@ -72,23 +74,24 @@ func (m *SyncSuccess) write(w io.Writer, e Encoding) (err error) {
 // SyncFailure is an outgoing message containing a failure response to
 // a synchronous call.
 type SyncFailure struct {
-	Session uint16
-	Header  SyncFailureHeader
+	preamble
+	syncFailureHeader
+
 	Payload *rinq.Payload
 }
 
-// SyncFailureHeader is the header structure for SyncFailure messages.
-type SyncFailureHeader struct {
+// syncFailureHeader is the header structure for SyncFailure messages.
+type syncFailureHeader struct {
 	Seq            uint
 	FailureType    string
 	FailureMessage string
 }
 
 func (m *SyncFailure) write(w io.Writer, e Encoding) (err error) {
-	err = writePreamble(w, commandSyncFailureType, m.Session)
+	err = m.preamble.write(w, commandSyncFailureType)
 
 	if err == nil {
-		err = e.EncodeHeader(w, m.Header)
+		err = e.EncodeHeader(w, m.syncFailureHeader)
 
 		if err == nil {
 			err = e.EncodePayload(w, m.Payload)
@@ -101,20 +104,20 @@ func (m *SyncFailure) write(w io.Writer, e Encoding) (err error) {
 // SyncError is an outgoing message containing a failure response to
 // a synchronous call.
 type SyncError struct {
-	Session uint16
-	Header  SyncErrorHeader
+	preamble
+	syncErrorHeader
 }
 
-// SyncErrorHeader is the header structure for SyncError messages.
-type SyncErrorHeader struct {
+// syncErrorHeader is the header structure for SyncError messages.
+type syncErrorHeader struct {
 	Seq uint
 }
 
 func (m *SyncError) write(w io.Writer, e Encoding) (err error) {
-	err = writePreamble(w, commandSyncErrorType, m.Session)
+	err = m.preamble.write(w, commandSyncErrorType)
 
 	if err == nil {
-		err = e.EncodeHeader(w, m.Header)
+		err = e.EncodeHeader(w, m.syncErrorHeader)
 	}
 
 	return
@@ -123,22 +126,22 @@ func (m *SyncError) write(w io.Writer, e Encoding) (err error) {
 // NewSyncResponse returns an outgoing message to send a synchronous command
 // response to the client.
 func NewSyncResponse(
-	session uint16,
+	session SessionIndex,
 	seq uint,
 	p *rinq.Payload, err error,
 ) (Outgoing, bool) {
 	switch e := err.(type) {
 	case nil:
 		return &SyncSuccess{
-			Session: session,
-			Header:  SyncSuccessHeader{Seq: seq},
-			Payload: p,
+			preamble:          preamble{session},
+			syncSuccessHeader: syncSuccessHeader{Seq: seq},
+			Payload:           p,
 		}, true
 
 	case rinq.Failure:
 		return &SyncFailure{
-			Session: session,
-			Header: SyncFailureHeader{
+			preamble: preamble{session},
+			syncFailureHeader: syncFailureHeader{
 				Seq:            seq,
 				FailureType:    e.Type,
 				FailureMessage: e.Message,
@@ -148,8 +151,8 @@ func NewSyncResponse(
 
 	case rinq.CommandError:
 		return &SyncError{
-			Session: session,
-			Header:  SyncErrorHeader{Seq: seq},
+			preamble:        preamble{session},
+			syncErrorHeader: syncErrorHeader{Seq: seq},
 		}, true
 	}
 

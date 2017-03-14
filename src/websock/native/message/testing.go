@@ -1,6 +1,4 @@
-package message_test
-
-import . "github.com/rinq/httpd/src/websock/native/message"
+package message
 
 type mockVisitor struct {
 	VisitedMessage Incoming
