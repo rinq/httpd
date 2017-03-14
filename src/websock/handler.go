@@ -72,6 +72,16 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	wsh, ok := h.handlers[socket.Subprotocol()]
 	if !ok {
+		// Write a close message for those clients that don't automatically
+		// disconnect after a failed sub-protocol negotiation.
+		_ = socket.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(
+				websocket.CloseProtocolError,
+				"unsupported sub-protocol",
+			),
+			time.Now().Add(time.Second),
+		)
 		fmt.Println("unsupported sub-protocol") // TODO: log, pull from headers
 		return
 	}

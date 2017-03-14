@@ -1,36 +1,34 @@
 package websock_test
 
 import (
-	"bufio"
-	"bytes"
+	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/rinq/httpd/src/websock"
+	"github.com/rinq/httpd/src/websock/internal/mock"
 )
 
 var _ = Describe("httpHandler", func() {
 	var (
-		handlerA, handlerB *mockHandler
+		handlerA, handlerB *mock.Handler
+		subject            http.Handler
 		logger             *log.Logger
-
-		request  *http.Request
-		response responseRecorder
-
-		subject http.Handler
+		server             *httptest.Server
 	)
 
 	BeforeEach(func() {
-		handlerA = &mockHandler{protocol: "proto-a"}
-		handlerB = &mockHandler{protocol: "proto-b"}
+		handlerA = &mock.Handler{}
+		handlerA.Impl.Protocol = "proto-a"
 
-		request = httptest.NewRequest("GET", "/", nil)
-		response = responseRecorder{httptest.NewRecorder()}
+		handlerB = &mock.Handler{}
+		handlerB.Impl.Protocol = "proto-b"
 
 		subject = NewHTTPHandler(
 			"*",
@@ -39,70 +37,79 @@ var _ = Describe("httpHandler", func() {
 			handlerA,
 			handlerB,
 		)
+
+		server = httptest.NewServer(subject)
 	})
 
-	BeforeEach(func() {
-		request.Header = http.Header{}
-		request.Header.Add("Connection", "upgrade")
-		request.Header.Add("Upgrade", "websocket")
-		request.Header.Add("Sec-Websocket-Version", "13")
-		request.Header.Add("Sec-Websocket-Key", "<key>")
-		request.Header.Add("Sec-Websocket-Protocol", "proto-b")
+	AfterEach(func() {
+		server.Close()
 	})
 
-	It("dispatches to the correct websocket handler", func() {
-		subject.ServeHTTP(response, request)
+	It("dispatches based on sub-protocol", func() {
+		handlerA.Impl.Handle = func(Connection, *http.Request) error {
+			panic("wrong handler")
+		}
 
-		Expect(handlerA.called).To(BeFalse())
-		Expect(handlerB.called).To(BeTrue())
+		barrier := make(chan bool, 1)
+		handlerB.Impl.Handle = func(Connection, *http.Request) error {
+			barrier <- true
+			return nil
+		}
 
-		Expect(handlerB.connection).ToNot(BeNil())
-		Expect(handlerB.request).To(Equal(request))
+		url := strings.Replace(server.URL, "http://", "ws://", 1)
+		d := websocket.Dialer{Subprotocols: []string{"proto-b"}}
+		con, _, err := d.Dial(url, nil)
+		if con != nil {
+			defer con.Close()
+		}
+
+		Expect(err).ShouldNot(HaveOccurred())
+
+		select {
+		case <-barrier:
+		case <-time.After(time.Second):
+			panic("timeout")
+		}
+	})
+
+	It("closes the connection if the sub-protocol is not supported", func() {
+		url := strings.Replace(server.URL, "http://", "ws://", 1)
+		d := websocket.Dialer{Subprotocols: []string{"unsupported-protocol"}}
+
+		con, _, err := d.Dial(url, nil)
+		if con != nil {
+			defer con.Close()
+		}
+
+		Expect(err).ShouldNot(HaveOccurred())
+
+		timeout := time.After(time.Second)
+
+		for {
+			select {
+			case <-timeout:
+				panic("timeout")
+			default:
+				_, _, err = con.ReadMessage()
+				if err != nil {
+					e := err.(*websocket.CloseError)
+					Expect(e.Code).To(Equal(websocket.CloseProtocolError))
+					return
+				}
+			}
+		}
 	})
 
 	It("renders an error page when the request is not an upgrade", func() {
-		request.Header.Set("Upgrade", "other")
-		subject.ServeHTTP(response, request)
+		r, err := http.Get(server.URL)
+		if r != nil {
+			defer r.Body.Close()
+		}
 
-		Expect(response.Code).To(Equal(http.StatusBadRequest))
-		Expect(response.Body).To(ContainSubstring("Bad Request"))
+		Expect(err).ShouldNot(HaveOccurred())
+		body, _ := ioutil.ReadAll(r.Body)
+
+		Expect(r.StatusCode).To(Equal(http.StatusBadRequest))
+		Expect(body).To(ContainSubstring("Bad Request"))
 	})
 })
-
-type mockConnection struct {
-	net.Conn
-}
-
-func (*mockConnection) Write(b []byte) (int, error) { return len(b), nil }
-func (*mockConnection) SetDeadline(time.Time) error { return nil }
-func (*mockConnection) Close() error                { return nil }
-
-type responseRecorder struct {
-	*httptest.ResponseRecorder
-}
-
-func (responseRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	r := bufio.NewReader(&bytes.Buffer{})
-	w := bufio.NewWriter(&bytes.Buffer{})
-	return &mockConnection{}, bufio.NewReadWriter(r, w), nil
-}
-
-type mockHandler struct {
-	protocol   string
-	err        error
-	called     bool
-	connection Connection
-	request    *http.Request
-}
-
-func (h *mockHandler) Protocol() string {
-	return h.protocol
-}
-
-func (h *mockHandler) Handle(c Connection, r *http.Request) error {
-	h.called = true
-	h.connection = c
-	h.request = r
-
-	return h.err
-}

@@ -19,20 +19,18 @@ type connection struct {
 	pingInterval time.Duration
 	closeReply   func(int, string) error
 
-	done  chan struct{}
 	mutex sync.Mutex // write mutex
+	done  chan struct{}
 }
 
 func newConn(socket *websocket.Conn, pingInterval time.Duration) *connection {
 	c := &connection{
 		socket:       socket,
 		pingInterval: pingInterval,
-		closeReply:   socket.CloseHandler(),
 		done:         make(chan struct{}),
 	}
 
 	socket.SetPongHandler(c.pong)
-	socket.SetCloseHandler(c.close)
 
 	go c.pingLoop()
 
@@ -41,6 +39,18 @@ func newConn(socket *websocket.Conn, pingInterval time.Duration) *connection {
 
 func (c *connection) NextReader() (io.Reader, error) {
 	_, r, err := c.socket.NextReader()
+
+	if _, ok := err.(*websocket.CloseError); ok {
+		c.mutex.Lock()
+		defer c.mutex.Unlock()
+
+		select {
+		case <-c.done:
+		default:
+			close(c.done)
+		}
+	}
+
 	return r, err
 }
 
@@ -54,15 +64,6 @@ func (c *connection) NextWriter() (io.WriteCloser, error) {
 	}
 
 	return writeCloser{w, &c.mutex}, nil
-}
-
-func (c *connection) close(code int, text string) error {
-	close(c.done)
-
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	return c.closeReply(code, text)
 }
 
 func (c *connection) pingLoop() {
