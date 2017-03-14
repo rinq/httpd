@@ -9,21 +9,31 @@ import (
 // Notification is an outoing message indicating that notification was received
 // by a session.
 type Notification struct {
-	Session uint16
-	Header  NotificationHeader
+	preamble
+	notificationHeader
+
 	Payload *rinq.Payload
 }
 
-// NotificationHeader is the header structure for Notification messages.
-type NotificationHeader struct {
+// NewNotification returns an outgoing message to send a notification to the client.
+func NewNotification(session SessionIndex, n rinq.Notification) *Notification {
+	return &Notification{
+		preamble:           preamble{session},
+		notificationHeader: notificationHeader{Type: n.Type},
+		Payload:            n.Payload,
+	}
+}
+
+// notificationHeader is the header structure for Notification messages.
+type notificationHeader struct {
 	Type string
 }
 
 func (m *Notification) write(w io.Writer, e Encoding) (err error) {
-	err = writePreamble(w, sessionNotificationType, m.Session)
+	err = m.preamble.write(w, sessionNotificationType)
 
 	if err == nil {
-		err = e.EncodeHeader(w, m.Header)
+		err = e.EncodeHeader(w, m.notificationHeader)
 
 		if err == nil {
 			err = e.EncodePayload(w, m.Payload)
@@ -31,13 +41,4 @@ func (m *Notification) write(w io.Writer, e Encoding) (err error) {
 	}
 
 	return
-}
-
-// NewNotification returns an outgoing message to send a notification to the client.
-func NewNotification(session uint16, n rinq.Notification) Outgoing {
-	return &Notification{
-		Session: session,
-		Header:  NotificationHeader{Type: n.Type},
-		Payload: n.Payload,
-	}
 }

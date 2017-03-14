@@ -1,11 +1,10 @@
-package message_test
+package message
 
 import (
 	"bytes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
@@ -15,8 +14,8 @@ var _ = Describe("Notification", func() {
 			var buf bytes.Buffer
 			p := rinq.NewPayload("payload")
 			m := &Notification{
-				Session: 0xabcd,
-				Header: NotificationHeader{
+				preamble: preamble{0xabcd},
+				notificationHeader: notificationHeader{
 					Type: "type",
 				},
 				Payload: p,
@@ -48,9 +47,9 @@ var _ = Describe("NewNotification", func() {
 		m := NewNotification(0xabcd, n)
 
 		Expect(m).To(Equal(&Notification{
-			Session: 0xabcd,
-			Header:  NotificationHeader{Type: "type"},
-			Payload: p,
+			preamble:           preamble{0xabcd},
+			notificationHeader: notificationHeader{Type: "type"},
+			Payload:            p,
 		}))
 	})
 })

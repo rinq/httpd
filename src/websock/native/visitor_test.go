@@ -1,6 +1,7 @@
 package native
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -9,28 +10,34 @@ import (
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
-var _ = Describe("connection", func() {
+var _ = Describe("visitor", func() {
 	var (
-		subject *connection
+		sent []message.Outgoing
+		send func(message.Outgoing)
+
+		subject *visitor
 	)
 
 	BeforeEach(func() {
-		subject = &connection{}
-	})
+		sent = nil
+		send = func(m message.Outgoing) {
+			sent = append(sent, m)
+		}
 
-	Describe("Close", func() {
-
+		subject = newVisitor(context.Background(), nil, nil, send)
 	})
 
 	Describe("VisitSessionCreate", func() {
-		// msg := &message.SessionCreate{Session: 0xabcd}
+		msg := &message.SessionCreate{}
+		msg.Session = 0xabcd
 
 		XIt("returns an error if the session index is already in use", func() {
 		})
 	})
 
 	Describe("VisitSessionDestroy", func() {
-		msg := &message.SessionDestroy{Session: 0xabcd}
+		msg := &message.SessionDestroy{}
+		msg.Session = 0xabcd
 
 		It("returns an error if the session index is not in use", func() {
 			err := subject.VisitSessionDestroy(msg)
@@ -39,16 +46,13 @@ var _ = Describe("connection", func() {
 	})
 
 	Describe("VisitSyncCall", func() {
-		msg := &message.SyncCall{
-			Session: 0xabcd,
-			Header: message.SyncCallHeader{
-				Seq:       123,
-				Namespace: "ns",
-				Command:   "cmd",
-				Timeout:   456 * time.Millisecond,
-			},
-			Payload: rinq.NewPayload("payload"),
-		}
+		msg := &message.SyncCall{}
+		msg.Session = 0xabcd
+		msg.Seq = 123
+		msg.Namespace = "ns"
+		msg.Command = "cmd"
+		msg.Timeout = 456 * time.Millisecond
+		msg.Payload = rinq.NewPayload("payload")
 
 		It("returns an error if the session index is not in use", func() {
 			err := subject.VisitSyncCall(msg)
@@ -57,15 +61,12 @@ var _ = Describe("connection", func() {
 	})
 
 	Describe("VisitAsyncCall", func() {
-		msg := &message.AsyncCall{
-			Session: 0xabcd,
-			Header: message.AsyncCallHeader{
-				Namespace: "ns",
-				Command:   "cmd",
-				Timeout:   456 * time.Millisecond,
-			},
-			Payload: rinq.NewPayload("payload"),
-		}
+		msg := &message.AsyncCall{}
+		msg.Session = 0xabcd
+		msg.Namespace = "ns"
+		msg.Command = "cmd"
+		msg.Timeout = 456 * time.Millisecond
+		msg.Payload = rinq.NewPayload("payload")
 
 		It("returns an error if the session index is not in use", func() {
 			err := subject.VisitAsyncCall(msg)
@@ -74,14 +75,11 @@ var _ = Describe("connection", func() {
 	})
 
 	Describe("VisitExecute", func() {
-		msg := &message.Execute{
-			Session: 0xabcd,
-			Header: message.ExecuteHeader{
-				Namespace: "ns",
-				Command:   "cmd",
-			},
-			Payload: rinq.NewPayload("payload"),
-		}
+		msg := &message.Execute{}
+		msg.Session = 0xabcd
+		msg.Namespace = "ns"
+		msg.Command = "cmd"
+		msg.Payload = rinq.NewPayload("payload")
 
 		It("returns an error if the session index is not in use", func() {
 			err := subject.VisitExecute(msg)

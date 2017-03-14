@@ -1,4 +1,4 @@
-package message_test
+package message
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
@@ -41,8 +40,8 @@ var _ = Describe("SyncCall", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expected := &SyncCall{
-				Session: 0xabcd,
-				Header: SyncCallHeader{
+				preamble: preamble{0xabcd},
+				syncCallHeader: syncCallHeader{
 					Seq:       123,
 					Namespace: "ns",
 					Command:   "cmd",
@@ -61,8 +60,8 @@ var _ = Describe("SyncSuccess", func() {
 			var buf bytes.Buffer
 			p := rinq.NewPayload("payload")
 			m := &SyncSuccess{
-				Session: 0xabcd,
-				Header: SyncSuccessHeader{
+				preamble: preamble{0xabcd},
+				syncSuccessHeader: syncSuccessHeader{
 					Seq: 123,
 				},
 				Payload: p,
@@ -90,8 +89,8 @@ var _ = Describe("SyncFailure", func() {
 			var buf bytes.Buffer
 			p := rinq.NewPayload("payload")
 			m := &SyncFailure{
-				Session: 0xabcd,
-				Header: SyncFailureHeader{
+				preamble: preamble{0xabcd},
+				syncFailureHeader: syncFailureHeader{
 					Seq:            123,
 					FailureType:    "fail-type",
 					FailureMessage: "message",
@@ -120,8 +119,8 @@ var _ = Describe("SyncError", func() {
 		It("encodes the message", func() {
 			var buf bytes.Buffer
 			m := &SyncError{
-				Session: 0xabcd,
-				Header: SyncErrorHeader{
+				preamble: preamble{0xabcd},
+				syncErrorHeader: syncErrorHeader{
 					Seq: 123,
 				},
 			}
@@ -147,9 +146,9 @@ var _ = Describe("NewSyncResponse", func() {
 		m, ok := NewSyncResponse(0xabcd, 123, p, nil)
 
 		Expect(m).To(Equal(&SyncSuccess{
-			Session: 0xabcd,
-			Header:  SyncSuccessHeader{Seq: 123},
-			Payload: p,
+			preamble:          preamble{0xabcd},
+			syncSuccessHeader: syncSuccessHeader{Seq: 123},
+			Payload:           p,
 		}))
 
 		Expect(ok).To(BeTrue())
@@ -166,8 +165,8 @@ var _ = Describe("NewSyncResponse", func() {
 		m, ok := NewSyncResponse(0xabcd, 123, p, err)
 
 		Expect(m).To(Equal(&SyncFailure{
-			Session: 0xabcd,
-			Header: SyncFailureHeader{
+			preamble: preamble{0xabcd},
+			syncFailureHeader: syncFailureHeader{
 				Seq:            123,
 				FailureType:    "type",
 				FailureMessage: "message",
@@ -183,8 +182,8 @@ var _ = Describe("NewSyncResponse", func() {
 		m, ok := NewSyncResponse(0xabcd, 123, nil, err)
 
 		Expect(m).To(Equal(&SyncError{
-			Session: 0xabcd,
-			Header:  SyncErrorHeader{Seq: 123},
+			preamble:        preamble{0xabcd},
+			syncErrorHeader: syncErrorHeader{Seq: 123},
 		}))
 
 		Expect(ok).To(BeTrue())

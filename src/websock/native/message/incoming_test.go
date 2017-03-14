@@ -1,4 +1,4 @@
-package message_test
+package message
 
 import (
 	"bytes"
@@ -6,7 +6,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/websock/native/message"
 )
 
 var _ = Describe("Read", func() {

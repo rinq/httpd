@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"math"
 
 	"github.com/rinq/httpd/src/internal/bufferpool"
 	"github.com/rinq/rinq-go/src/rinq"
@@ -48,11 +47,11 @@ func (e *headerEncoding) EncodeHeader(w io.Writer, h interface{}) error {
 		return err
 	}
 
-	if buf.Len() > math.MaxUint16 {
+	if buf.Len() > headerMax {
 		return errors.New("header exceeds maximum size")
 	}
 
-	if err := binary.Write(w, binary.BigEndian, uint16(buf.Len())); err != nil {
+	if err := binary.Write(w, binary.BigEndian, headerSize(buf.Len())); err != nil {
 		return err
 	}
 

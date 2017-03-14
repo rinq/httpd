@@ -1,170 +1,115 @@
 package websock_test
 
 import (
-	"bufio"
-	"bytes"
+	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/rinq/httpd/src/websock"
-	"github.com/rinq/rinq-go/src/rinq"
+	"github.com/rinq/httpd/src/websock/internal/mock"
 )
 
 var _ = Describe("httpHandler", func() {
 	var (
-		handlerA, handlerB *mockHandler
-		peer               rinq.Peer
-		config             Config
+		handlerA, handlerB *mock.Handler
+		subject            http.Handler
 		logger             *log.Logger
-
-		request  *http.Request
-		response responseRecorder
-
-		subject http.Handler
+		server             *httptest.Server
 	)
 
 	BeforeEach(func() {
-		handlerA = &mockHandler{protocol: "proto-a"}
-		handlerB = &mockHandler{protocol: "proto-b"}
+		handlerA = &mock.Handler{}
+		handlerA.Impl.Protocol = "proto-a"
 
-		peer = &mockPeer{}
-
-		request = httptest.NewRequest("GET", "/", nil)
-		response = responseRecorder{httptest.NewRecorder()}
+		handlerB = &mock.Handler{}
+		handlerB.Impl.Protocol = "proto-b"
 
 		subject = NewHTTPHandler(
-			func() (rinq.Peer, bool) {
-				return peer, true
-			},
-			config,
+			"*",
+			time.Second,
 			logger,
 			handlerA,
 			handlerB,
 		)
+
+		server = httptest.NewServer(subject)
 	})
 
-	Context("when the request is a websocket", func() {
-		BeforeEach(func() {
-			request.Header = http.Header{}
-			request.Header.Add("Connection", "upgrade")
-			request.Header.Add("Upgrade", "websocket")
-			request.Header.Add("Sec-Websocket-Version", "13")
-			request.Header.Add("Sec-Websocket-Key", "<key>")
-			request.Header.Add("Sec-Websocket-Protocol", "proto-b")
-		})
+	AfterEach(func() {
+		server.Close()
+	})
 
-		It("dispatches to the correct websocket handler", func() {
-			subject.ServeHTTP(response, request)
+	It("dispatches based on sub-protocol", func() {
+		handlerA.Impl.Handle = func(Connection, *http.Request) error {
+			panic("wrong handler")
+		}
 
-			Expect(handlerA.called).To(BeFalse())
-			Expect(handlerB.called).To(BeTrue())
+		barrier := make(chan bool, 1)
+		handlerB.Impl.Handle = func(Connection, *http.Request) error {
+			barrier <- true
+			return nil
+		}
 
-			Expect(handlerB.peer).To(Equal(peer))
-			Expect(handlerB.config).To(Equal(&config))
-		})
+		url := strings.Replace(server.URL, "http://", "ws://", 1)
+		d := websocket.Dialer{Subprotocols: []string{"proto-b"}}
+		con, _, err := d.Dial(url, nil)
+		if con != nil {
+			defer con.Close()
+		}
 
-		It("supplies an attribute containing the host", func() {
-			subject.ServeHTTP(response, request)
+		Expect(err).ShouldNot(HaveOccurred())
 
-			Expect(handlerB.attrs).To(ContainElement(
-				rinq.Freeze("rinq.httpd.host", "example.com"),
-			))
-		})
+		select {
+		case <-barrier:
+		case <-time.After(time.Second):
+			panic("timeout")
+		}
+	})
 
-		It("supplies an attribute containing the remote address", func() {
-			subject.ServeHTTP(response, request)
+	It("closes the connection if the sub-protocol is not supported", func() {
+		url := strings.Replace(server.URL, "http://", "ws://", 1)
+		d := websocket.Dialer{Subprotocols: []string{"unsupported-protocol"}}
 
-			Expect(handlerB.attrs).To(ContainElement(
-				rinq.Freeze("rinq.httpd.remote-addr", "192.0.2.1"),
-			))
-		})
+		con, _, err := d.Dial(url, nil)
+		if con != nil {
+			defer con.Close()
+		}
 
-		It("supports remote addresses without ports", func() {
-			request.RemoteAddr = "192.0.2.2"
-			subject.ServeHTTP(response, request)
+		Expect(err).ShouldNot(HaveOccurred())
 
-			Expect(handlerB.attrs).To(ContainElement(
-				rinq.Freeze("rinq.httpd.remote-addr", "192.0.2.2"),
-			))
-		})
+		timeout := time.After(time.Second)
 
-		It("uses the X-Forwarded-For header when present", func() {
-			request.Header.Add("X-Forwarded-For", "10.1.1.1,10.2.2.2")
-			subject.ServeHTTP(response, request)
-
-			Expect(handlerB.attrs).To(ContainElement(
-				rinq.Freeze("rinq.httpd.remote-addr", "10.1.1.1"),
-			))
-		})
+		for {
+			select {
+			case <-timeout:
+				panic("timeout")
+			default:
+				_, _, err = con.ReadMessage()
+				if err != nil {
+					e := err.(*websocket.CloseError)
+					Expect(e.Code).To(Equal(websocket.CloseProtocolError))
+					return
+				}
+			}
+		}
 	})
 
 	It("renders an error page when the request is not an upgrade", func() {
-		subject.ServeHTTP(response, request)
+		r, err := http.Get(server.URL)
+		if r != nil {
+			defer r.Body.Close()
+		}
 
-		Expect(response.Code).To(Equal(http.StatusBadRequest))
-		Expect(response.Body).To(ContainSubstring("Bad Request"))
-	})
+		Expect(err).ShouldNot(HaveOccurred())
+		body, _ := ioutil.ReadAll(r.Body)
 
-	It("renders an error page when the peer is not available", func() {
-		subject = NewHTTPHandler(
-			func() (rinq.Peer, bool) {
-				return nil, false
-			},
-			config,
-			logger,
-			handlerA,
-			handlerB,
-		)
-
-		subject.ServeHTTP(response, request)
-
-		Expect(response.Code).To(Equal(http.StatusServiceUnavailable))
-		Expect(response.Body).To(ContainSubstring("Service Unavailable"))
+		Expect(r.StatusCode).To(Equal(http.StatusBadRequest))
+		Expect(body).To(ContainSubstring("Bad Request"))
 	})
 })
-
-type mockPeer struct {
-	rinq.Peer
-}
-
-type mockConnection struct {
-	net.Conn
-}
-
-func (*mockConnection) Write(b []byte) (int, error) { return len(b), nil }
-func (*mockConnection) SetDeadline(time.Time) error { return nil }
-func (*mockConnection) Close() error                { return nil }
-
-type responseRecorder struct {
-	*httptest.ResponseRecorder
-}
-
-func (responseRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	r := bufio.NewReader(&bytes.Buffer{})
-	w := bufio.NewWriter(&bytes.Buffer{})
-	return &mockConnection{}, bufio.NewReadWriter(r, w), nil
-}
-
-type mockHandler struct {
-	protocol string
-	called   bool
-	config   *Config
-	peer     rinq.Peer
-	attrs    []rinq.Attr
-}
-
-func (h *mockHandler) Protocol() string {
-	return h.protocol
-}
-
-func (h *mockHandler) Handle(s Socket, c Config, p rinq.Peer, a []rinq.Attr) {
-	h.called = true
-	h.config = &c
-	h.peer = p
-	h.attrs = a
-}

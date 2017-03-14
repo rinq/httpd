@@ -1,4 +1,4 @@
-package message_test
+package message
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/websock/native/message"
 )
 
 var _ = Describe("SessionCreate", func() {
@@ -31,12 +30,25 @@ var _ = Describe("SessionCreate", func() {
 			m, err := Read(r, nil)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(m).To(Equal(&SessionCreate{Session: 0xabcd}))
+			Expect(m).To(Equal(&SessionCreate{preamble: preamble{0xabcd}}))
 		})
 	})
 })
 
 var _ = Describe("SessionDestroy", func() {
+	Describe("Accept", func() {
+		It("invokes the correct visit method", func() {
+			expected := errors.New("visit error")
+			v := &mockVisitor{Error: expected}
+			m := &SessionDestroy{}
+
+			err := m.Accept(v)
+
+			Expect(err).To(Equal(expected))
+			Expect(v.VisitedMessage).To(Equal(m))
+		})
+	})
+
 	Describe("Accept", func() {
 		It("invokes the correct visit method", func() {
 			expected := errors.New("visit error")
@@ -57,14 +69,14 @@ var _ = Describe("SessionDestroy", func() {
 			m, err := Read(r, nil)
 
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(m).To(Equal(&SessionDestroy{Session: 0xabcd}))
+			Expect(m).To(Equal(&SessionDestroy{preamble: preamble{0xabcd}}))
 		})
 	})
 
 	Describe("write", func() {
 		It("encodes the message", func() {
 			var buf bytes.Buffer
-			m := &SessionDestroy{Session: 0xabcd}
+			m := &SessionDestroy{preamble: preamble{0xabcd}}
 
 			err := Write(&buf, nil, m)
 
@@ -76,5 +88,15 @@ var _ = Describe("SessionDestroy", func() {
 			}
 			Expect(buf.Bytes()).To(Equal(expected))
 		})
+	})
+})
+
+var _ = Describe("NewSessionDestroy", func() {
+	It("returns a session destroy message", func() {
+		m := NewSessionDestroy(0xabcd)
+
+		Expect(m).To(Equal(&SessionDestroy{
+			preamble: preamble{0xabcd},
+		}))
 	})
 })

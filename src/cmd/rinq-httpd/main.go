@@ -87,16 +87,11 @@ func serve(server *http.Server, c chan<- error) {
 
 func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {
 	return websock.NewHTTPHandler(
-		func() (rinq.Peer, bool) {
-			return peer, true // TODO
-		},
-		websock.Config{
-			OriginPattern: os.Getenv("RINQ_HTTPD_ORIGIN"),
-			PingInterval:  pingInterval(),
-		},
+		os.Getenv("RINQ_HTTPD_ORIGIN"),
+		pingInterval(),
 		logger,
-		&native.Handler{Encoding: message.CBOREncoding, Logger: logger},
-		&native.Handler{Encoding: message.JSONEncoding, Logger: logger},
+		&native.Handler{Peer: peer, Encoding: message.CBOREncoding, Logger: logger},
+		&native.Handler{Peer: peer, Encoding: message.JSONEncoding, Logger: logger},
 	)
 }
 

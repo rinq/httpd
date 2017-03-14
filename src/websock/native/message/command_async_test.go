@@ -1,4 +1,4 @@
-package message_test
+package message
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
@@ -41,8 +40,8 @@ var _ = Describe("AsyncCall", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			expected := &AsyncCall{
-				Session: 0xabcd,
-				Header: AsyncCallHeader{
+				preamble: preamble{0xabcd},
+				asyncCallHeader: asyncCallHeader{
 					Namespace: "ns",
 					Command:   "cmd",
 					Timeout:   456 * time.Millisecond,
@@ -60,8 +59,8 @@ var _ = Describe("AsyncSuccess", func() {
 			var buf bytes.Buffer
 			p := rinq.NewPayload("payload")
 			m := &AsyncSuccess{
-				Session: 0xabcd,
-				Header: AsyncSuccessHeader{
+				preamble: preamble{0xabcd},
+				asyncSuccessHeader: asyncSuccessHeader{
 					Namespace: "ns",
 					Command:   "cmd",
 				},
@@ -90,8 +89,8 @@ var _ = Describe("AsyncFailure", func() {
 			var buf bytes.Buffer
 			p := rinq.NewPayload("payload")
 			m := &AsyncFailure{
-				Session: 0xabcd,
-				Header: AsyncFailureHeader{
+				preamble: preamble{0xabcd},
+				asyncFailureHeader: asyncFailureHeader{
 					Namespace:      "ns",
 					Command:        "cmd",
 					FailureType:    "fail-type",
@@ -121,8 +120,8 @@ var _ = Describe("AsyncError", func() {
 		It("encodes the message", func() {
 			var buf bytes.Buffer
 			m := &AsyncError{
-				Session: 0xabcd,
-				Header: AsyncErrorHeader{
+				preamble: preamble{0xabcd},
+				asyncErrorHeader: asyncErrorHeader{
 					Namespace: "ns",
 					Command:   "cmd",
 				},
@@ -149,8 +148,8 @@ var _ = Describe("NewAsyncResponse", func() {
 		m, ok := NewAsyncResponse(0xabcd, "ns", "cmd", p, nil)
 
 		Expect(m).To(Equal(&AsyncSuccess{
-			Session: 0xabcd,
-			Header: AsyncSuccessHeader{
+			preamble: preamble{0xabcd},
+			asyncSuccessHeader: asyncSuccessHeader{
 				Namespace: "ns",
 				Command:   "cmd",
 			},
@@ -171,8 +170,8 @@ var _ = Describe("NewAsyncResponse", func() {
 		m, ok := NewAsyncResponse(0xabcd, "ns", "cmd", p, err)
 
 		Expect(m).To(Equal(&AsyncFailure{
-			Session: 0xabcd,
-			Header: AsyncFailureHeader{
+			preamble: preamble{0xabcd},
+			asyncFailureHeader: asyncFailureHeader{
 				Namespace:      "ns",
 				Command:        "cmd",
 				FailureType:    "type",
@@ -189,8 +188,8 @@ var _ = Describe("NewAsyncResponse", func() {
 		m, ok := NewAsyncResponse(0xabcd, "ns", "cmd", nil, err)
 
 		Expect(m).To(Equal(&AsyncError{
-			Session: 0xabcd,
-			Header: AsyncErrorHeader{
+			preamble: preamble{0xabcd},
+			asyncErrorHeader: asyncErrorHeader{
 				Namespace: "ns",
 				Command:   "cmd",
 			},
