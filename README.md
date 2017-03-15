@@ -3,7 +3,6 @@
 [![Build Status](http://img.shields.io/travis/rinq/httpd/master.svg)](https://travis-ci.org/rinq/httpd)
 [![Code Coverage](https://img.shields.io/codecov/c/github/rinq/httpd/master.svg)](https://codecov.io/github/rinq/httpd)
 [![Latest Version](https://img.shields.io/github/tag/rinq/httpd.svg?label=semver)](https://semver.org)
-[![GoDoc](https://godoc.org/github.com/rinq/httpd?status.svg)](https://godoc.org/github.com/rinq/httpd/src/rinq)
 [![Go Report Card](https://goreportcard.com/badge/github.com/rinq/httpd)](https://goreportcard.com/report/github.com/rinq/httpd)
 [![Docker Pulls](https://img.shields.io/docker/pulls/rinq/httpd.svg)](https://hub.docker.com/r/rinq/httpd/)
 
