@@ -45,6 +45,26 @@ var _ = Describe("visitor", func() {
 		})
 	})
 
+	Describe("VisitListen", func() {
+		msg := &message.Listen{}
+		msg.Session = 0xabcd
+
+		It("returns an error if the session index is not in use", func() {
+			err := subject.VisitListen(msg)
+			Expect(err).To(MatchError("session 43981 does not exist"))
+		})
+	})
+
+	Describe("VisitUnlisten", func() {
+		msg := &message.Unlisten{}
+		msg.Session = 0xabcd
+
+		It("returns an error if the session index is not in use", func() {
+			err := subject.VisitUnlisten(msg)
+			Expect(err).To(MatchError("session 43981 does not exist"))
+		})
+	})
+
 	Describe("VisitSyncCall", func() {
 		msg := &message.SyncCall{}
 		msg.Session = 0xabcd

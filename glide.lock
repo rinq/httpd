@@ -1,16 +1,16 @@
-hash: 9c47f4b24ab138dea1c009102563f26b1d4d1b387b31fbabac99eaa4db7b56c5
-updated: 2017-03-09T08:03:40.45907301+10:00
+hash: 45d5e5116bea6ebacfad5af28293b6ee842ef76014dde26a03ffb6be0c3464e1
+updated: 2017-09-18T10:47:57.124386533+10:00
 imports:
 - name: github.com/golang/gddo
   version: 4544b8858aa7e119448f90172ea6790873f59b38
   subpackages:
   - httputil/header
 - name: github.com/gorilla/websocket
-  version: 3ab3a8b8831546bd18fd182c20687ca853b2bb13
+  version: ea4d1f681babbce9545c9c5f3d5194a789c89f5b
 - name: github.com/hashicorp/go-version
   version: 03c5bf6be031b6dd45afec16b1cf94fc8938bc77
 - name: github.com/onsi/ginkgo
-  version: ab07225d112dc7a93c289ac5b2e12735c2c46035
+  version: a1f616c97771e46da1722d3aa9dcde0a43f55682
   subpackages:
   - config
   - extensions/table
@@ -20,6 +20,7 @@ imports:
   - internal/leafnodes
   - internal/remote
   - internal/spec
+  - internal/spec_iterator
   - internal/specrunner
   - internal/suite
   - internal/testingtproxy
@@ -30,7 +31,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 1de7ab2df9105aa5c15c4d7e14a8a514e3cb8d4b
+  version: 00acfa9d92a386415bd235ab069c52063f925998
   subpackages:
   - format
   - internal/assertion
@@ -44,7 +45,7 @@ imports:
   - matchers/support/goraph/util
   - types
 - name: github.com/rinq/rinq-go
-  version: fe8957f99315b7d61b221d70ebc98250283ebc3f
+  version: f4be50980b398567206a4084150ab34074bf037c
   subpackages:
   - src/rinq
   - src/rinq/amqp
@@ -55,6 +56,7 @@ imports:
   - src/rinq/internal/attrmeta
   - src/rinq/internal/bufferpool
   - src/rinq/internal/command
+  - src/rinq/internal/env
   - src/rinq/internal/localsession
   - src/rinq/internal/notify
   - src/rinq/internal/reflectutil
@@ -64,15 +66,47 @@ imports:
   - src/rinq/internal/syncutil
   - src/rinq/trace
 - name: github.com/streadway/amqp
-  version: ce1c69d94c3efdb1f287015f851b17db8fa205b1
+  version: 2cbfe40c9341ad63ba23e53013b3ddc7989d801c
 - name: github.com/ugorji/go
   version: c88ee250d0221a57af388746f5cf03768c21d6e2
   subpackages:
   - codec
 testImports:
+- name: golang.org/x/net
+  version: 0e2717dc3cc05907dc23096ef3a9086ea93f567f
+  subpackages:
+  - context
+  - context/ctxhttp
+  - html
+  - html/atom
+  - html/charset
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/sys
   version: d67a3279aecd76a65c4c9e6c352c888f5b3a574a
   subpackages:
   - unix
+- name: golang.org/x/text
+  version: d69c40b4be55797923cec7457fac7a244d91a9b6
+  subpackages:
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - encoding/internal
+  - encoding/internal/identifier
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - internal/tag
+  - internal/utf8internal
+  - language
+  - runes
+  - transform
 - name: gopkg.in/yaml.v2
   version: a3f3340b5840cee44f372bddb5880fcbc419b46a

@@ -17,6 +17,16 @@ func (v *mockVisitor) VisitSessionDestroy(m *SessionDestroy) error {
 	return v.Error
 }
 
+func (v *mockVisitor) VisitListen(m *Listen) error {
+	v.VisitedMessage = m
+	return v.Error
+}
+
+func (v *mockVisitor) VisitUnlisten(m *Unlisten) error {
+	v.VisitedMessage = m
+	return v.Error
+}
+
 func (v *mockVisitor) VisitSyncCall(m *SyncCall) error {
 	v.VisitedMessage = m
 	return v.Error

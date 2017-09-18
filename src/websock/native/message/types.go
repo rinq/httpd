@@ -15,6 +15,13 @@ type headerSize uint16
 const headerMax = math.MaxUint16
 
 const (
+	sessionCreateType  messageType = 'S'<<8 | 'C'
+	sessionDestroyType messageType = 'S'<<8 | 'D'
+
+	sessionNotificationType         messageType = 'N'<<8 | 'O'
+	sessionNotificationListenType   messageType = 'N'<<8 | 'L'
+	sessionNotificationUnlistenType messageType = 'N'<<8 | 'U'
+
 	commandSyncCallType    messageType = 'C'<<8 | 'C'
 	commandSyncSuccessType messageType = 'C'<<8 | 'S'
 	commandSyncFailureType messageType = 'C'<<8 | 'F'
@@ -26,9 +33,4 @@ const (
 	commandAsyncErrorType   messageType = 'A'<<8 | 'E'
 
 	commandExecuteType messageType = 'C'<<8 | 'X'
-
-	sessionNotificationType messageType = 'N'<<8 | 'O'
-
-	sessionCreateType  messageType = 'S'<<8 | 'C'
-	sessionDestroyType messageType = 'S'<<8 | 'D'
 )
