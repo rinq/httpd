@@ -2,6 +2,7 @@ DOCKER_REPO ?= rinq/httpd
 
 SHELL := /bin/bash
 -include artifacts/make/go.mk
+-include artifacts/make/docker.mk
 
 .PHONY: run
 run: artifacts/build/debug/$(GOOS)/$(GOARCH)/rinq-httpd

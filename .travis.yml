@@ -1,6 +1,6 @@
 language: go
 go:
-- '1.8'
+- '1.9'
 - tip
 matrix:
   fast_finish: true
@@ -19,11 +19,11 @@ deploy:
   on:
     tags: true
 - provider: script
-  script: make docker-push
+  script: DOCKER_TAG=$TRAVIS_TAG make docker-push
   skip_cleanup: true
-  go: '1.8'
+  go: '1.9'
   on:
-    branch: master
+    tags: true
 env:
   global:
     secure: DkVfuL/Rg79qSPu0OvdKBpLKlbZqXKCNzrDRtCMNw4O/qMOzwcxawfTJxqSy2lytByvaIqtGkY4DV/qx/0LjxTbNtIpz3COiSLFMyCZ3Ky6E0BiIShimEsvAmk4J4vp7vYYJ3k7isux+3HXGQcYfoPvp+7rJqkU9StRzBrQA0fAx3PiRbazuUpQWXXfgDHYTS/TJHjVjA5kT0p3ukSASRAIFALt+sMrQD9UEl3hf+8hocEaGyJsEIcC0t0UEOeYCIt4Uahn7aXzPOUL19DVlAFMnjnqBKo2YEotd1DA/1zHFR6WKpEae936dKt8109CGaZ/h8xpHKILkv3nPPSEVyE0NrDN40ZF/yOqTCD683TAqDggiCR+OXG36DgZhI+gNI9WhLWt1Hea+zx9SjlpMdzHz586lp7o2vzpCy4IRy631Fffw1G4WaOMHgqDpj01Q3Cl2XPlSeJkaojz6k0kZJs7sjOjvn+0VPP1uXSWLhBA5Cs3kS8w7TmMhEHtJDiMYeAWcN5YQTdptDvLGPOE/9OciBThx4xNHBxtrGJ8h4mvmFCzgrcAjerRumjCpFp/4HkpNDx3haCHVsTqw58LWRvlDV+Qn8SiHtvhHfxrtaBzBe6+FMp6GXobl+aQ2Fu3hFjfFDyptScA/EE0VfzZorswXJR4ek8I/eaJVk58rfkc=
