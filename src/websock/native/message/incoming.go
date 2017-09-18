@@ -25,16 +25,20 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 
 	if err == nil {
 		switch mt {
+		case sessionCreateType:
+			msg = &SessionCreate{}
+		case sessionDestroyType:
+			msg = &SessionDestroy{}
+		case sessionNotificationListenType:
+			msg = &Listen{}
+		case sessionNotificationUnlistenType:
+			msg = &Unlisten{}
 		case commandSyncCallType:
 			msg = &SyncCall{}
 		case commandAsyncCallType:
 			msg = &AsyncCall{}
 		case commandExecuteType:
 			msg = &Execute{}
-		case sessionCreateType:
-			msg = &SessionCreate{}
-		case sessionDestroyType:
-			msg = &SessionDestroy{}
 		default:
 			err = fmt.Errorf("unrecognized incoming message type: 0x%04x", mt)
 			return
@@ -58,6 +62,8 @@ func Read(r io.Reader, e Encoding) (msg Incoming, err error) {
 type Visitor interface {
 	VisitSessionCreate(*SessionCreate) error
 	VisitSessionDestroy(*SessionDestroy) error
+	VisitListen(*Listen) error
+	VisitUnlisten(*Unlisten) error
 	VisitSyncCall(*SyncCall) error
 	VisitAsyncCall(*AsyncCall) error
 	VisitExecute(*Execute) error

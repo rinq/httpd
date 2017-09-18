@@ -77,6 +77,37 @@ func (v *visitor) VisitSessionDestroy(m *message.SessionDestroy) error {
 	return nil
 }
 
+func (v *visitor) VisitListen(m *message.Listen) error {
+	sess, ok := v.find(m.Session)
+	if !ok {
+		return fmt.Errorf("session %d does not exist", m.Session)
+	}
+
+	for _, ns := range m.Namespaces {
+		if err := sess.Listen(ns, v.notify); err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}
+
+func (v *visitor) VisitUnlisten(m *message.Unlisten) error {
+	sess, ok := v.find(m.Session)
+	if !ok {
+		return fmt.Errorf("session %d does not exist", m.Session)
+	}
+
+	for _, ns := range m.Namespaces {
+		if err := sess.Unlisten(ns); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (v *visitor) VisitSyncCall(m *message.SyncCall) error {
 	if sess, ok := v.find(m.Session); ok {
 		go v.call(sess, m)
@@ -115,10 +146,6 @@ func (v *visitor) newSession() (sess rinq.Session, err error) {
 			sess.Destroy()
 		}
 	}()
-
-	if err = sess.Listen(v.notify); err != nil {
-		return
-	}
 
 	if err = sess.SetAsyncHandler(v.respond); err != nil {
 		return
