@@ -16,7 +16,8 @@ var _ = Describe("Notification", func() {
 			m := &Notification{
 				preamble: preamble{0xabcd},
 				notificationHeader: notificationHeader{
-					Type: "type",
+					Namespace: "ns",
+					Type:      "type",
 				},
 				Payload: p,
 			}
@@ -28,9 +29,9 @@ var _ = Describe("Notification", func() {
 			expected := []byte{
 				'N', 'O',
 				0xab, 0xcd, // session index
-				0, 8, // header size
+				0, 13, // header size
 			}
-			expected = append(expected, `["type"]`...)
+			expected = append(expected, `["ns","type"]`...)
 			expected = append(expected, `"payload"`...)
 			Expect(buf.Bytes()).To(Equal(expected))
 		})
@@ -41,15 +42,19 @@ var _ = Describe("NewNotification", func() {
 	It("returns a notification message", func() {
 		p := rinq.NewPayload(456)
 		n := rinq.Notification{
-			Type:    "type",
-			Payload: p,
+			Namespace: "ns",
+			Type:      "type",
+			Payload:   p,
 		}
 		m := NewNotification(0xabcd, n)
 
 		Expect(m).To(Equal(&Notification{
-			preamble:           preamble{0xabcd},
-			notificationHeader: notificationHeader{Type: "type"},
-			Payload:            p,
+			preamble: preamble{0xabcd},
+			notificationHeader: notificationHeader{
+				Namespace: "ns",
+				Type:      "type",
+			},
+			Payload: p,
 		}))
 	})
 })

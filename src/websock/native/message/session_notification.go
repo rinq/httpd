@@ -18,15 +18,19 @@ type Notification struct {
 // NewNotification returns an outgoing message to send a notification to the client.
 func NewNotification(session SessionIndex, n rinq.Notification) *Notification {
 	return &Notification{
-		preamble:           preamble{session},
-		notificationHeader: notificationHeader{Type: n.Type},
-		Payload:            n.Payload,
+		preamble: preamble{session},
+		notificationHeader: notificationHeader{
+			Namespace: n.Namespace,
+			Type:      n.Type,
+		},
+		Payload: n.Payload,
 	}
 }
 
 // notificationHeader is the header structure for Notification messages.
 type notificationHeader struct {
-	Type string
+	Namespace string
+	Type      string
 }
 
 func (m *Notification) write(w io.Writer, e Encoding) (err error) {
