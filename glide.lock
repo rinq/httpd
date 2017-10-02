@@ -1,5 +1,5 @@
-hash: 45d5e5116bea6ebacfad5af28293b6ee842ef76014dde26a03ffb6be0c3464e1
-updated: 2017-09-18T10:47:57.124386533+10:00
+hash: 0cf712a2861e9e07da4fc52a79d344957309d66de62815b75b9673fd124e4120
+updated: 2017-10-02T16:27:44.4368575+10:00
 imports:
 - name: github.com/golang/gddo
   version: 4544b8858aa7e119448f90172ea6790873f59b38
@@ -10,7 +10,7 @@ imports:
 - name: github.com/hashicorp/go-version
   version: 03c5bf6be031b6dd45afec16b1cf94fc8938bc77
 - name: github.com/onsi/ginkgo
-  version: a1f616c97771e46da1722d3aa9dcde0a43f55682
+  version: 11459a886d9cd66b319dac7ef1e917ee221372c9
   subpackages:
   - config
   - extensions/table
@@ -31,7 +31,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 00acfa9d92a386415bd235ab069c52063f925998
+  version: dcabb60a477c2b6f456df65037cb6708210fbb02
   subpackages:
   - format
   - internal/assertion
@@ -44,8 +44,13 @@ imports:
   - matchers/support/goraph/node
   - matchers/support/goraph/util
   - types
+- name: github.com/opentracing/opentracing-go
+  version: 1949ddbfd147afd4d964a9f00b24eb291e0e7c38
+  subpackages:
+  - ext
+  - log
 - name: github.com/rinq/rinq-go
-  version: f4be50980b398567206a4084150ab34074bf037c
+  version: 51564bebb00c2bdcd2cbf961de4c385f865f86b8
   subpackages:
   - src/rinq
   - src/rinq/amqp
@@ -54,24 +59,27 @@ imports:
   - src/rinq/amqp/internal/notifyamqp
   - src/rinq/ident
   - src/rinq/internal/attrmeta
+  - src/rinq/internal/attrutil
   - src/rinq/internal/bufferpool
   - src/rinq/internal/command
-  - src/rinq/internal/env
+  - src/rinq/internal/envutil
   - src/rinq/internal/localsession
   - src/rinq/internal/notify
+  - src/rinq/internal/optutil
   - src/rinq/internal/reflectutil
   - src/rinq/internal/remotesession
   - src/rinq/internal/revision
   - src/rinq/internal/service
   - src/rinq/internal/syncutil
+  - src/rinq/internal/traceutil
+  - src/rinq/options
   - src/rinq/trace
 - name: github.com/streadway/amqp
   version: 2cbfe40c9341ad63ba23e53013b3ddc7989d801c
 - name: github.com/ugorji/go
-  version: c88ee250d0221a57af388746f5cf03768c21d6e2
+  version: 5efa3251c7f7d05e5d9704a69a984ec9f1386a40
   subpackages:
   - codec
-testImports:
 - name: golang.org/x/net
   version: 0e2717dc3cc05907dc23096ef3a9086ea93f567f
   subpackages:
@@ -86,8 +94,9 @@ testImports:
   - internal/timeseries
   - lex/httplex
   - trace
+testImports:
 - name: golang.org/x/sys
-  version: d67a3279aecd76a65c4c9e6c352c888f5b3a574a
+  version: d9157a9621b69ad1d8d77a1933590c416593f24f
   subpackages:
   - unix
 - name: golang.org/x/text
@@ -109,4 +118,4 @@ testImports:
   - runes
   - transform
 - name: gopkg.in/yaml.v2
-  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
+  version: bef53efd0c76e49e6de55ead051f886bea7e9420

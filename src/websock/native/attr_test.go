@@ -14,7 +14,7 @@ var _ = Describe("sessionAttributes", func() {
 		attrs := sessionAttributes(request)
 
 		Expect(attrs).To(ContainElement(
-			rinq.Freeze("rinq.httpd.host", "example.com"),
+			rinq.Freeze("host", "example.com"),
 		))
 	})
 
@@ -23,7 +23,7 @@ var _ = Describe("sessionAttributes", func() {
 		attrs := sessionAttributes(request)
 
 		Expect(attrs).To(ContainElement(
-			rinq.Freeze("rinq.httpd.remote-addr", "192.0.2.1"),
+			rinq.Freeze("remote-addr", "192.0.2.1"),
 		))
 	})
 
@@ -33,7 +33,7 @@ var _ = Describe("sessionAttributes", func() {
 		attrs := sessionAttributes(request)
 
 		Expect(attrs).To(ContainElement(
-			rinq.Freeze("rinq.httpd.remote-addr", "192.0.2.2"),
+			rinq.Freeze("remote-addr", "192.0.2.2"),
 		))
 	})
 
@@ -43,7 +43,7 @@ var _ = Describe("sessionAttributes", func() {
 		attrs := sessionAttributes(request)
 
 		Expect(attrs).To(ContainElement(
-			rinq.Freeze("rinq.httpd.remote-addr", "10.1.1.1"),
+			rinq.Freeze("remote-addr", "10.1.1.1"),
 		))
 	})
 })

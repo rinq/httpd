@@ -8,6 +8,8 @@ import (
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
+const attrNamespace = "rinq.httpd"
+
 // sessionAttributes returns the set of attributes to apply to new sessions for
 // the given request.
 func sessionAttributes(r *http.Request) []rinq.Attr {
@@ -27,7 +29,7 @@ func sessionAttributes(r *http.Request) []rinq.Attr {
 	}
 
 	return []rinq.Attr{
-		rinq.Freeze("rinq.httpd.remote-addr", remoteAddr),
-		rinq.Freeze("rinq.httpd.host", r.Host),
+		rinq.Freeze("remote-addr", remoteAddr),
+		rinq.Freeze("host", r.Host),
 	}
 }

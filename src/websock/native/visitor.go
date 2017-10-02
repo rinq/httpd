@@ -153,7 +153,7 @@ func (v *visitor) newSession() (sess rinq.Session, err error) {
 
 	rev, err := sess.CurrentRevision()
 	if err == nil {
-		_, err = rev.Update(v.context, v.attrs...)
+		_, err = rev.Update(v.context, attrNamespace, v.attrs...)
 	}
 
 	return
