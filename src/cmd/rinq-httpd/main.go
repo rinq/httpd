@@ -15,7 +15,7 @@ import (
 	"github.com/rinq/httpd/src/websock/native"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
-	"github.com/rinq/rinq-go/src/rinq/amqp"
+	"github.com/rinq/rinq-go/src/rinqamqp"
 )
 
 func main() {
@@ -67,7 +67,7 @@ func connect() rinq.Peer {
 	for {
 		// TODO: this env var will be handled by rinq-go
 		// https://github.com/rinq/rinq-go/issues/94
-		peer, err := amqp.Dial(os.Getenv("RINQ_AMQP_DSN"))
+		peer, err := rinqamqp.DialEnv()
 		if err == nil {
 			return peer
 		}

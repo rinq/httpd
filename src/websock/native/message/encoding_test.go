@@ -39,7 +39,7 @@ var _ = Describe("headerEncoding", func() {
 		It("returns an error if the header can not be encoded", func() {
 			var buf bytes.Buffer
 
-			err := subject.EncodeHeader(&buf, brokerHeader{})
+			err := subject.EncodeHeader(&buf, brokenHeader{})
 
 			Expect(err).Should(HaveOccurred())
 		})
@@ -109,9 +109,10 @@ type testPayload struct {
 	B string
 }
 
-type brokerHeader struct{}
+type brokenHeader struct{}
 
-func (brokerHeader) MarshalJSON() ([]byte, error) { return nil, errors.New("forced error") }
+func (brokenHeader) MarshalJSON() ([]byte, error) { return nil, errors.New("forced error") }
+func (brokenHeader) UnmarshalJSON([]byte) error   { panic("not implemented") }
 
 type brokenWriter struct{}
 

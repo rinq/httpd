@@ -1,14 +1,14 @@
-hash: 0cf712a2861e9e07da4fc52a79d344957309d66de62815b75b9673fd124e4120
-updated: 2017-10-02T16:27:44.4368575+10:00
+hash: 1428e2fa6a74d2a2355ff1650598a455e2ce2f2bde57530d54a29946a51abef2
+updated: 2017-10-27T13:55:59.044523178+10:00
 imports:
 - name: github.com/golang/gddo
-  version: 4544b8858aa7e119448f90172ea6790873f59b38
+  version: 9125e5a0ecc76de82a532a98dcf25f21dcdda00a
   subpackages:
   - httputil/header
 - name: github.com/gorilla/websocket
   version: ea4d1f681babbce9545c9c5f3d5194a789c89f5b
 - name: github.com/hashicorp/go-version
-  version: 03c5bf6be031b6dd45afec16b1cf94fc8938bc77
+  version: fc61389e27c71d120f87031ca8c88a3428f372dd
 - name: github.com/onsi/ginkgo
   version: 11459a886d9cd66b319dac7ef1e917ee221372c9
   subpackages:
@@ -31,7 +31,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: dcabb60a477c2b6f456df65037cb6708210fbb02
+  version: 283ed655c6b8238afecd5bea6434bc9b03129f2f
   subpackages:
   - format
   - internal/assertion
@@ -50,38 +50,38 @@ imports:
   - ext
   - log
 - name: github.com/rinq/rinq-go
-  version: 51564bebb00c2bdcd2cbf961de4c385f865f86b8
+  version: 2c4bbe7acc6b720a447ec04915c754c7c706abc1
   subpackages:
+  - src/internal/attributes
+  - src/internal/command
+  - src/internal/localsession
+  - src/internal/namespaces
+  - src/internal/notify
+  - src/internal/opentr
+  - src/internal/remotesession
+  - src/internal/revision
+  - src/internal/service
+  - src/internal/x/bufferpool
+  - src/internal/x/env
+  - src/internal/x/repr
+  - src/internal/x/syncx
   - src/rinq
-  - src/rinq/amqp
-  - src/rinq/amqp/internal/amqputil
-  - src/rinq/amqp/internal/commandamqp
-  - src/rinq/amqp/internal/notifyamqp
+  - src/rinq/constraint
   - src/rinq/ident
-  - src/rinq/internal/attrmeta
-  - src/rinq/internal/attrutil
-  - src/rinq/internal/bufferpool
-  - src/rinq/internal/command
-  - src/rinq/internal/envutil
-  - src/rinq/internal/localsession
-  - src/rinq/internal/notify
-  - src/rinq/internal/optutil
-  - src/rinq/internal/reflectutil
-  - src/rinq/internal/remotesession
-  - src/rinq/internal/revision
-  - src/rinq/internal/service
-  - src/rinq/internal/syncutil
-  - src/rinq/internal/traceutil
   - src/rinq/options
   - src/rinq/trace
+  - src/rinqamqp
+  - src/rinqamqp/internal/amqputil
+  - src/rinqamqp/internal/commandamqp
+  - src/rinqamqp/internal/notifyamqp
 - name: github.com/streadway/amqp
-  version: 2cbfe40c9341ad63ba23e53013b3ddc7989d801c
+  version: 7db842394ca79f338f781d47bc59115f44adb20b
 - name: github.com/ugorji/go
-  version: 5efa3251c7f7d05e5d9704a69a984ec9f1386a40
+  version: 16373bd7016380b084e8a4e8f9560efe82cbc98c
   subpackages:
   - codec
 - name: golang.org/x/net
-  version: 0e2717dc3cc05907dc23096ef3a9086ea93f567f
+  version: b60f3a92103dfd93dfcb900ec77c6d0643510868
   subpackages:
   - context
   - context/ctxhttp
@@ -96,11 +96,11 @@ imports:
   - trace
 testImports:
 - name: golang.org/x/sys
-  version: d9157a9621b69ad1d8d77a1933590c416593f24f
+  version: 2320a9c15898af1b1b24f99700d5c1e957f9d8cf
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: d69c40b4be55797923cec7457fac7a244d91a9b6
+  version: 1cbadb444a806fd9430d14ad08967ed91da4fa0a
   subpackages:
   - encoding
   - encoding/charmap
@@ -116,6 +116,9 @@ testImports:
   - internal/utf8internal
   - language
   - runes
+  - secure/bidirule
   - transform
+  - unicode/bidi
+  - unicode/norm
 - name: gopkg.in/yaml.v2
-  version: bef53efd0c76e49e6de55ead051f886bea7e9420
+  version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
