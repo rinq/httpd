@@ -1,5 +1,5 @@
 hash: 1428e2fa6a74d2a2355ff1650598a455e2ce2f2bde57530d54a29946a51abef2
-updated: 2017-10-27T13:55:59.044523178+10:00
+updated: 2018-05-28T15:45:48.471506+10:00
 imports:
 - name: github.com/golang/gddo
   version: 9125e5a0ecc76de82a532a98dcf25f21dcdda00a
@@ -10,7 +10,7 @@ imports:
 - name: github.com/hashicorp/go-version
   version: fc61389e27c71d120f87031ca8c88a3428f372dd
 - name: github.com/onsi/ginkgo
-  version: 11459a886d9cd66b319dac7ef1e917ee221372c9
+  version: 26d21430af911e84459ee38099f0a07e57a7f9b0
   subpackages:
   - config
   - extensions/table
@@ -31,7 +31,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 283ed655c6b8238afecd5bea6434bc9b03129f2f
+  version: 7ac6b01f7d376befdf752224be59eed5d21fab4b
   subpackages:
   - format
   - internal/assertion
@@ -50,7 +50,7 @@ imports:
   - ext
   - log
 - name: github.com/rinq/rinq-go
-  version: 2c4bbe7acc6b720a447ec04915c754c7c706abc1
+  version: c83949fd92c50dc0228daa82125f73f6382c6a8a
   subpackages:
   - src/internal/attributes
   - src/internal/command
@@ -59,7 +59,7 @@ imports:
   - src/internal/notify
   - src/internal/opentr
   - src/internal/remotesession
-  - src/internal/revision
+  - src/internal/revisions
   - src/internal/service
   - src/internal/x/bufferpool
   - src/internal/x/env
@@ -75,7 +75,7 @@ imports:
   - src/rinqamqp/internal/commandamqp
   - src/rinqamqp/internal/notifyamqp
 - name: github.com/streadway/amqp
-  version: 7db842394ca79f338f781d47bc59115f44adb20b
+  version: 8e4aba63da9fc5571e01c6a45dc809a58cbc5a68
 - name: github.com/ugorji/go
   version: 16373bd7016380b084e8a4e8f9560efe82cbc98c
   subpackages:
