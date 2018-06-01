@@ -9,11 +9,16 @@ import (
 )
 
 const (
-	HttpdAttrNamespace  = "rinq.httpd"
-	HttpdAttrHost       = "host"
-	HttpdAttrClientIP   = "client-ip"
+	//HttpdAttrNamespace is the namespace the attributes are in
+	HttpdAttrNamespace = "rinq.httpd"
+	//HttpdAttrHost contains the reported request host
+	HttpdAttrHost = "host"
+	//HttpdAttrClientIP contains the reported client host
+	HttpdAttrClientIP = "client-ip"
+	//HttpdAttrRemoteAddr contains the reported client host:port
 	HttpdAttrRemoteAddr = "remote-addr"
-	HttpdAttrLocalAddr  = "local-addr"
+	//HttpdAttrLocalAddr contains the report local host:port
+	HttpdAttrLocalAddr = "local-addr"
 )
 
 // sessionAttributes returns the set of attributes to apply to new sessions for
