@@ -3,12 +3,12 @@ package native
 import (
 	"net/http/httptest"
 
+	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/rinq/rinq-go/src/rinq"
-	"context"
-	"net/http"
 	"net"
+	"net/http"
 )
 
 var _ = Describe("sessionAttributes", func() {
@@ -49,7 +49,6 @@ var _ = Describe("sessionAttributes", func() {
 		ctx, err := net.ResolveTCPAddr("tcp", addr)
 		Expect(err).NotTo(HaveOccurred())
 
-
 		request := httptest.NewRequest("GET", "/", nil)
 		request = request.WithContext(context.WithValue(context.Background(), http.LocalAddrContextKey, ctx))
 
@@ -80,5 +79,3 @@ var _ = Describe("sessionAttributes", func() {
 		))
 	})
 })
-
-
