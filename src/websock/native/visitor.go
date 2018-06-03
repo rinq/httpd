@@ -150,7 +150,7 @@ func (v *visitor) newSession() (sess rinq.Session, err error) {
 	if err = sess.SetAsyncHandler(v.respond); err != nil {
 		return
 	}
-  
+
 	_, err = sess.CurrentRevision().Update(v.context, HttpdAttrNamespace, v.attrs...)
 
 	return
