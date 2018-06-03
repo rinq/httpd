@@ -151,7 +151,7 @@ func (v *visitor) newSession() (sess rinq.Session, err error) {
 		return
 	}
 
-	_, err = sess.CurrentRevision().Update(v.context, attrNamespace, v.attrs...)
+	_, err = sess.CurrentRevision().Update(v.context, HttpdAttrNamespace, v.attrs...)
 
 	return
 }

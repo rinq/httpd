@@ -8,28 +8,47 @@ import (
 	"github.com/rinq/rinq-go/src/rinq"
 )
 
-const attrNamespace = "rinq.httpd"
+const (
+	//HttpdAttrNamespace is the namespace the attributes are in
+	HttpdAttrNamespace = "rinq.httpd"
+	//HttpdAttrHost contains the reported request host
+	HttpdAttrHost = "host"
+	//HttpdAttrClientIP contains the reported client host
+	HttpdAttrClientIP = "client-ip"
+	//HttpdAttrRemoteAddr contains the reported client host:port
+	HttpdAttrRemoteAddr = "remote-addr"
+	//HttpdAttrLocalAddr contains the report local host:port
+	HttpdAttrLocalAddr = "local-addr"
+)
 
 // sessionAttributes returns the set of attributes to apply to new sessions for
 // the given request.
 func sessionAttributes(r *http.Request) []rinq.Attr {
-	remoteAddr := ""
+	clientIP := ""
 	for _, ip := range header.ParseList(r.Header, "X-Forwarded-For") {
-		remoteAddr = ip
+		clientIP = ip
 		break
 	}
 
-	if remoteAddr == "" {
+	if clientIP == "" {
 		host, _, _ := net.SplitHostPort(r.RemoteAddr)
 		if host != "" {
-			remoteAddr = host
+			clientIP = host
 		} else {
-			remoteAddr = r.RemoteAddr
+			clientIP = r.RemoteAddr
 		}
 	}
 
-	return []rinq.Attr{
-		rinq.Freeze("remote-addr", remoteAddr),
-		rinq.Freeze("host", r.Host),
+	attr := []rinq.Attr{
+		rinq.Freeze(HttpdAttrHost, r.Host),
+		rinq.Freeze(HttpdAttrClientIP, clientIP),
+
+		rinq.Freeze(HttpdAttrRemoteAddr, r.RemoteAddr),
 	}
+
+	if localAddr := r.Context().Value(http.LocalAddrContextKey); localAddr != nil {
+		attr = append(attr, rinq.Freeze(HttpdAttrLocalAddr, localAddr.(net.Addr).String()))
+	}
+
+	return attr
 }
