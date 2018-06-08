@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
+	"github.com/rinq/rinq-go/src/rinqamqp"
 )
 
 var _ = Describe("visitor", func() {
@@ -16,7 +17,21 @@ var _ = Describe("visitor", func() {
 		send func(message.Outgoing)
 
 		subject *visitor
+
+		peer rinq.Peer
 	)
+
+	BeforeSuite(func() {
+		var err error
+
+		peer, err = rinqamqp.DialEnv()
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		peer.Stop()
+		<-peer.Done()
+	})
 
 	BeforeEach(func() {
 		sent = nil
@@ -24,7 +39,7 @@ var _ = Describe("visitor", func() {
 			sent = append(sent, m)
 		}
 
-		subject = newVisitor(context.Background(), nil, nil, send)
+		subject = newVisitor(context.Background(), peer, nil, send)
 	})
 
 	Describe("VisitSessionCreate", func() {
@@ -71,7 +86,7 @@ var _ = Describe("visitor", func() {
 		msg.Seq = 123
 		msg.Namespace = "ns"
 		msg.Command = "cmd"
-		msg.Timeout = 456 * time.Millisecond
+		msg.Timeout = 456 * time.Hour
 		msg.Payload = rinq.NewPayload("payload")
 
 		It("returns an error if the session index is not in use", func() {

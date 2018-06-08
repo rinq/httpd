@@ -8,6 +8,7 @@ import (
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 	"github.com/rinq/rinq-go/src/rinq/ident"
+	"time"
 )
 
 type visitor struct {
@@ -19,6 +20,8 @@ type visitor struct {
 	mutex   sync.RWMutex
 	forward map[message.SessionIndex]rinq.Session
 	reverse map[ident.SessionID]message.SessionIndex
+
+	syncCallTimeout *time.Duration
 }
 
 func newVisitor(
@@ -173,7 +176,9 @@ func (v *visitor) indexOf(sess rinq.Session) (message.SessionIndex, bool) {
 }
 
 func (v *visitor) call(sess rinq.Session, m *message.SyncCall) {
-	ctx, cancel := context.WithTimeout(v.context, m.Timeout)
+
+	timeout := v.capSyncCallTimeout(m.Timeout)
+	ctx, cancel := context.WithTimeout(v.context, timeout)
 	defer cancel()
 
 	p, err := sess.Call(ctx, m.Namespace, m.Command, m.Payload)
@@ -227,4 +232,12 @@ func (v *visitor) monitor(sess rinq.Session) {
 		delete(v.reverse, sess.ID())
 		v.send(message.NewSessionDestroy(i))
 	}
+}
+
+func (v *visitor) capSyncCallTimeout(t time.Duration) time.Duration {
+	if v.syncCallTimeout == nil || *v.syncCallTimeout > t {
+		return t
+	}
+
+	return *v.syncCallTimeout
 }
