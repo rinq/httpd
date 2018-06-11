@@ -58,7 +58,7 @@ func (h *Handler) Handle(c websock.Connection, r *http.Request) error {
 	)
 
 	for _, opt := range h.visitorOpt {
-		opt(v)
+		opt.modify(v)
 	}
 
 	for {
