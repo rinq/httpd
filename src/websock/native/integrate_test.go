@@ -3,33 +3,32 @@
 package native_test
 
 import (
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/ginkgo"
-	"github.com/rinq/rinq-go/src/rinq"
-	"github.com/rinq/httpd/src/websock/native"
-	"github.com/rinq/httpd/src/websock/native/message"
-	"io"
 	"bytes"
-	"net/http"
-	"net/http/httptest"
-	"github.com/rinq/rinq-go/src/rinqamqp"
 	"context"
-	"log"
-	"time"
 	"encoding/binary"
 	"fmt"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/rinq/httpd/src/websock/native"
+	"github.com/rinq/httpd/src/websock/native/message"
+	"github.com/rinq/rinq-go/src/rinq"
+	"github.com/rinq/rinq-go/src/rinq/options"
+	"github.com/rinq/rinq-go/src/rinqamqp"
+	"github.com/satori/go.uuid"
+	"io"
+	"log"
+	"net/http"
+	"net/http/httptest"
+	"time"
 )
 
+// absolute hack to get around nil being a valid value
+var noBody *struct{ Foo string } = nil
+
 var _ = Describe("handler", func() {
+
 	var (
-		subject native.Handler
-
 		peer rinq.Peer
-
-		websocket *mockWebsock
-
-		start func()
-		kill context.CancelFunc
 
 		req *http.Request
 	)
@@ -37,12 +36,12 @@ var _ = Describe("handler", func() {
 	const (
 		createSession uint16 = 'S'<<8 | 'C'
 
-		callSync uint16 = 'C'<<8 | 'C'
+		callSync        uint16 = 'C'<<8 | 'C'
 		callSyncSuccess uint16 = 'C'<<8 | 'S'
 		callSyncFailure uint16 = 'C'<<8 | 'F'
-		callSyncError  uint16 = 'C'<<8 | 'E'
+		callSyncError   uint16 = 'C'<<8 | 'E'
 
-		callAsync uint16 = 'A'<<8 | 'C'
+		callAsync        uint16 = 'A'<<8 | 'C'
 		callAsyncSuccess uint16 = 'A'<<8 | 'S'
 		callAsyncFailure uint16 = 'A'<<8 | 'F'
 		callAsyncError   uint16 = 'A'<<8 | 'E'
@@ -52,63 +51,52 @@ var _ = Describe("handler", func() {
 		session uint16 = 0xCAFE
 	)
 
-
 	BeforeEach(func() {
-		var err error
-
-		subject = native.NewHandler(peer, message.JSONEncoding)
-
-		var killCtx context.Context
-		killCtx, kill = context.WithTimeout(context.Background(), 500 * time.Millisecond)
-
-		var startCtx context.Context
-		startCtx, start = context.WithCancel(context.Background())
-
-		websocket = &mockWebsock{
-			ctx: killCtx,
-			start: startCtx.Done(),
-			wIn: make(chan []byte),
-		}
-
 		req = httptest.NewRequest("GET", "/", nil)
 
-		peer, err = rinqamqp.DialEnv()
+		var err error
+		peer, err = rinqamqp.DialEnv(options.Logger(rinq.NewLogger(false)))
 		Expect(err).ToNot(HaveOccurred())
-
-		go func() {
-			defer GinkgoRecover()
-
-			select {
-			case <-peer.Done():
-				Expect(peer.Err()).NotTo(HaveOccurred())
-				Fail("not expected to be here during the test")
-
-			case <-killCtx.Done():
-				// normal operation
-			}
-
-		}()
-
-	})
-
-	AfterEach(func() {
-		kill()
-
-		peer.Stop()
-		<-peer.Done()
 	})
 
 	Context("integration testing the default settings", func() {
 
 		const (
-			ns = "name-space"
-			cmd = "cmd"
-			seq uint = 1
+			nsBase      = "name-space"
+			cmd         = "cmd"
+			seq    uint = 1
 
 			respBody = "pong"
 		)
 
+		var (
+			ns      string
+			subject native.Handler
+
+			websocket *mockWebsock
+
+			start func()
+			kill  context.CancelFunc
+		)
+
 		BeforeEach(func() {
+
+			ns = nsBase + uuid.NewV4().String()
+
+			subject = native.NewHandler(peer, message.JSONEncoding)
+
+			var killCtx context.Context
+			killCtx, kill = context.WithTimeout(context.Background(), 1*time.Second)
+
+			var startCtx context.Context
+			startCtx, start = context.WithCancel(killCtx)
+
+			websocket = &mockWebsock{
+				ctx:   killCtx,
+				start: startCtx.Done(),
+				wIn:   make(chan []byte),
+			}
+
 			subject = native.NewHandler(peer, message.JSONEncoding)
 
 			go func() {
@@ -117,6 +105,14 @@ var _ = Describe("handler", func() {
 				err := subject.Handle(websocket, req)
 				log.Println("got", err.Error(), ", handler closed")
 			}()
+
+		})
+
+		AfterEach(func() {
+			kill()
+
+			peer.Stop()
+			<-peer.Done()
 		})
 
 		Context("successful calls", func() {
@@ -175,7 +171,7 @@ var _ = Describe("handler", func() {
 				failureMessageStatic = "failed"
 
 				failureMessageTemplate = "%s-%s"
-				failureMessageValues = []interface{}{ "namespace", "cmd"}
+				failureMessageValues   = []interface{}{"namespace", "cmd"}
 				failureMessageResolved = fmt.Sprintf(failureMessageTemplate, failureMessageValues...)
 			)
 			BeforeEach(func() {
@@ -216,9 +212,6 @@ var _ = Describe("handler", func() {
 					ns, cmd, failureMessageStatic, failureMessageResolved,
 				}, nil)
 
-				log.Println(string(resp))
-				log.Println(string(expected))
-
 				Expect(resp).To(Equal(expected))
 			})
 
@@ -235,7 +228,7 @@ var _ = Describe("handler", func() {
 			})
 		})
 
-		XContext("error calls", func() {
+		Context("error calls", func() {
 			BeforeEach(func() {
 				peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
 					defer req.Payload.Close()
@@ -253,9 +246,9 @@ var _ = Describe("handler", func() {
 
 				resp := websocket.getMsg()
 
-				expected := msg(callSyncFailure, session, []interface{}{
-					seq, failureMessageStatic, failureMessageResolved,
-				}, nil)
+				expected := msg(callSyncError, session, []interface{}{
+					seq,
+				}, noBody)
 
 				Expect(resp).To(Equal(expected))
 			})
@@ -270,12 +263,9 @@ var _ = Describe("handler", func() {
 
 				resp := websocket.getMsg()
 
-				expected := msg(callAsyncFailure, session, []interface{}{
-					ns, cmd, failureMessageStatic, failureMessageResolved,
-				}, nil)
-
-				log.Println(string(resp))
-				log.Println(string(expected))
+				expected := msg(callAsyncError, session, []interface{}{
+					ns, cmd,
+				}, noBody)
 
 				Expect(resp).To(Equal(expected))
 			})
@@ -291,6 +281,140 @@ var _ = Describe("handler", func() {
 				msg := websocket.getMsg()
 				Expect(msg).To(BeNil())
 			})
+		})
+	})
+
+	Context("integration testing with a timeout", func() {
+
+		var (
+			subject native.Handler
+			ns      string
+
+			websocket *mockWebsock
+
+			start func()
+			kill  func()
+		)
+
+		const (
+			nsBase      = "name-space"
+			cmd         = "cmd"
+			seq    uint = 1
+		)
+
+		BeforeEach(func() {
+
+			ns = nsBase + uuid.NewV4().String()
+			log.Println("listening on", ns)
+
+			var killCtx context.Context
+			killCtx, kill = context.WithCancel(context.Background())
+
+			var startCtx context.Context
+			startCtx, start = context.WithCancel(context.Background())
+
+			websocket = &mockWebsock{
+				ctx:   killCtx,
+				start: startCtx.Done(),
+				wIn:   make(chan []byte),
+			}
+
+			go func() {
+				defer GinkgoRecover()
+
+				<-startCtx.Done()
+
+				err := subject.Handle(websocket, req)
+				log.Println("got", err.Error(), ", handler closed")
+			}()
+		})
+
+		AfterEach(func() {
+			websocket = nil
+		})
+
+		It("limits a call to the server by the client timeout when the servers' timeout is longer", func() {
+
+			deadline := make(chan time.Time)
+
+			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+				// never return anything
+
+				dead, _ := ctx.Deadline()
+				deadline <- dead
+			})
+
+			// client timeouts are in milliseconds
+			clientTimeout := time.Duration(200)
+			serverTimeout := 1 * time.Second
+
+			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxSyncCallTimeout(serverTimeout))
+
+			websocket.queueMsg(createSession, session, nil, nil)
+			websocket.queueMsg(callSync, session, []interface{}{
+				seq, ns, cmd, clientTimeout,
+			}, "ping")
+
+			expectedTime := time.Now().Add(clientTimeout * time.Millisecond)
+
+			start()
+
+			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second*1))
+		})
+
+		It("limits a call to the server by the server timeout when the clients' timeout is longer", func() {
+			deadline := make(chan time.Time)
+
+			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+				// never return anything
+
+				dead, _ := ctx.Deadline()
+				deadline <- dead
+			})
+
+			// client timeouts are in milliseconds
+			clientTimeout := time.Duration(1000)
+			serverTimeout := time.Duration(200) * time.Millisecond
+
+			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxSyncCallTimeout(serverTimeout))
+
+			websocket.queueMsg(createSession, session, nil, nil)
+			websocket.queueMsg(callSync, session, []interface{}{
+				seq, ns, cmd, clientTimeout,
+			}, "ping")
+
+			expectedTime := time.Now().Add(serverTimeout)
+
+			start()
+
+			Expect(<-deadline).To(BeTemporally("~", expectedTime))
+		})
+
+		It("limits a call to the server by the clients' timeout when the servers' timeout is not set", func() {
+			deadline := make(chan time.Time)
+
+			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+				// never return anything
+
+				dead, _ := ctx.Deadline()
+				deadline <- dead
+			})
+
+			// client timeouts are in milliseconds
+			clientTimeout := time.Duration(1000)
+
+			subject = native.NewHandler(peer, message.JSONEncoding)
+
+			websocket.queueMsg(createSession, session, nil, nil)
+			websocket.queueMsg(callSync, session, []interface{}{
+				seq, ns, cmd, clientTimeout,
+			}, "ping")
+
+			expectedTime := time.Now().Add(clientTimeout * time.Millisecond)
+
+			start()
+
+			Expect(<-deadline).To(BeTemporally("~", expectedTime))
 		})
 
 	})
@@ -310,12 +434,12 @@ func msg(msgType uint16, session uint16, headers interface{}, payload interface{
 		if err := message.JSONEncoding.EncodeHeader(buff, headers); err != nil {
 			panic(err)
 		}
-	}
 
-	if headers != nil {
-		p := rinq.NewPayload(payload)
-		if err := message.JSONEncoding.EncodePayload(buff, p); err != nil {
-			panic(err)
+		if payload != noBody {
+			p := rinq.NewPayload(payload)
+			if err := message.JSONEncoding.EncodePayload(buff, p); err != nil {
+				panic(err)
+			}
 		}
 	}
 
@@ -323,18 +447,17 @@ func msg(msgType uint16, session uint16, headers interface{}, payload interface{
 }
 
 type mockWebsock struct {
-	ctx context.Context
+	ctx   context.Context
 	start <-chan struct{}
 
 	rOut []io.Reader
-	wIn chan []byte
+	wIn  chan []byte
 }
 
 func (m *mockWebsock) queueMsg(msgType uint16, session uint16, headers interface{}, payload interface{}) {
 	out := msg(msgType, session, headers, payload)
 	(*m).rOut = append((*m).rOut, bytes.NewBuffer(out))
 }
-
 
 func (m *mockWebsock) NextReader() (out io.Reader, err error) {
 	<-m.start
@@ -353,7 +476,7 @@ func (m *mockWebsock) getMsg() []byte {
 	case <-m.ctx.Done():
 		return nil
 	case b := <-m.wIn:
-			return b
+		return b
 	}
 }
 
@@ -365,7 +488,7 @@ func (m *mockWebsock) NextWriter() (out io.WriteCloser, err error) {
 	w := make(chan struct{})
 	go func() {
 		<-w
-		m.wIn<-b.Buffer.Bytes()
+		m.wIn <- b.Buffer.Bytes()
 	}()
 
 	b.cls = func() {
@@ -380,7 +503,7 @@ type wcByteBuff struct {
 	cls func()
 }
 
-func (w * wcByteBuff) Close() error {
+func (w *wcByteBuff) Close() error {
 	w.cls()
 	return nil
 }

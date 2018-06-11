@@ -1,5 +1,5 @@
-hash: 37af81eff4f5476f424ab651576c2e145b0448dfb78ad866341622aba60e0669
-updated: 2018-06-05T14:26:14.6931+10:00
+hash: 590bf58ba5bf490bb0b31ffc181add4ac4d18a2745f1c053825bd20bb18bf3c9
+updated: 2018-06-11T15:15:54.346229+10:00
 imports:
 - name: github.com/golang/gddo
   version: a154dc8b46f4e499724277f2ff2e9b41b959198d
@@ -74,6 +74,8 @@ imports:
   - src/rinqamqp/internal/amqputil
   - src/rinqamqp/internal/commandamqp
   - src/rinqamqp/internal/notifyamqp
+- name: github.com/satori/go.uuid
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/streadway/amqp
   version: e5adc2ada8b8efff032bf61173a233d143e9318e
 - name: github.com/ugorji/go
