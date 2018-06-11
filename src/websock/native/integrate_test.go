@@ -348,8 +348,8 @@ var _ = Describe("handler", func() {
 			})
 
 			// client timeouts are in milliseconds
-			clientTimeout := time.Duration(200)
-			serverTimeout := 1 * time.Second
+			clientTimeout := time.Duration(2000)
+			serverTimeout := 10 * time.Second
 
 			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxSyncCallTimeout(serverTimeout))
 
@@ -362,7 +362,7 @@ var _ = Describe("handler", func() {
 
 			close(start)
 
-			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second*1))
+			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second / 2))
 		})
 
 		It("limits a call to the server by the server timeout when the clients' timeout is longer", func() {
@@ -376,8 +376,8 @@ var _ = Describe("handler", func() {
 			})
 
 			// client timeouts are in milliseconds
-			clientTimeout := time.Duration(1000)
-			serverTimeout := time.Duration(200) * time.Millisecond
+			clientTimeout := time.Duration(10000)
+			serverTimeout := time.Duration(2000) * time.Millisecond
 
 			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxSyncCallTimeout(serverTimeout))
 
@@ -390,7 +390,7 @@ var _ = Describe("handler", func() {
 
 			close(start)
 
-			Expect(<-deadline).To(BeTemporally("~", expectedTime))
+			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second / 2))
 		})
 
 		It("limits a call to the server by the clients' timeout when the servers' timeout is not set", func() {
@@ -404,7 +404,7 @@ var _ = Describe("handler", func() {
 			})
 
 			// client timeouts are in milliseconds
-			clientTimeout := time.Duration(1000)
+			clientTimeout := time.Duration(10000)
 
 			subject = native.NewHandler(peer, message.JSONEncoding)
 
@@ -417,7 +417,7 @@ var _ = Describe("handler", func() {
 
 			close(start)
 
-			Expect(<-deadline).To(BeTemporally("~", expectedTime))
+			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second / 2))
 		})
 
 	})
