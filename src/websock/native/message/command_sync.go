@@ -125,6 +125,9 @@ func (m *SyncError) write(w io.Writer, e Encoding) (err error) {
 
 // NewSyncResponse returns an outgoing message to send a synchronous command
 // response to the client.
+//
+// This method explicitly doesn't test for context-level timeouts, as the client side
+// should be responsible dealing with this.
 func NewSyncResponse(
 	session SessionIndex,
 	seq uint,
