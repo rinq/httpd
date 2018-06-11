@@ -4,8 +4,8 @@ import "time"
 
 type option func(*visitor)
 
-func SyncCallTimeout(max time.Duration) option {
+func MaxSyncCallTimeout(max time.Duration) option {
 	return func(v *visitor) {
-		v.syncCallTimeout = &max
+		v.syncCallTimeout = max
 	}
 }

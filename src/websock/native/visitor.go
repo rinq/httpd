@@ -21,7 +21,7 @@ type visitor struct {
 	forward map[message.SessionIndex]rinq.Session
 	reverse map[ident.SessionID]message.SessionIndex
 
-	syncCallTimeout *time.Duration
+	syncCallTimeout time.Duration
 }
 
 func newVisitor(
@@ -235,9 +235,9 @@ func (v *visitor) monitor(sess rinq.Session) {
 }
 
 func (v *visitor) capSyncCallTimeout(t time.Duration) time.Duration {
-	if v.syncCallTimeout == nil || *v.syncCallTimeout > t {
+	if v.syncCallTimeout == 0 || v.syncCallTimeout > t {
 		return t
 	}
 
-	return *v.syncCallTimeout
+	return v.syncCallTimeout
 }
