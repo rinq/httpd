@@ -8,7 +8,6 @@ import (
 	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
-
 )
 
 const protocolPrefix = "rinq-1.0+"
@@ -21,6 +20,7 @@ func NewHandler(peer rinq.Peer, encoding message.Encoding, options ...option) Ha
 		visitorOpt: options,
 	}
 }
+
 // Handler is an implementation of websock.Handler that handles connections that
 // use Rinq's "native" subprotocol.
 type Handler struct {
