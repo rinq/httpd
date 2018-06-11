@@ -71,7 +71,6 @@ var _ = Describe("handler", func() {
 
 		var (
 			ns      string
-			subject native.Handler
 
 			websocket *mockWebsock
 
@@ -92,13 +91,12 @@ var _ = Describe("handler", func() {
 				wIn:   make(chan []byte),
 			}
 
-			subject = native.NewHandler(peer, message.JSONEncoding)
-
 			go func() {
 				defer GinkgoRecover()
 
 				<-start
-				err := subject.Handle(websocket, req)
+				handler := native.NewHandler(peer, message.JSONEncoding)
+				err := handler.Handle(websocket, req)
 				log.Println("got", err.Error(), ", handler closed")
 			}()
 		})
