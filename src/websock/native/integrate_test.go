@@ -83,8 +83,6 @@ var _ = Describe("handler", func() {
 
 			ns = nsBase + uuid.NewV4().String()
 
-			subject = native.NewHandler(peer, message.JSONEncoding)
-
 			start = make(chan struct{})
 			kill = make(chan struct{})
 
