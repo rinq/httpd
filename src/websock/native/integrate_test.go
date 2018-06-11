@@ -362,7 +362,7 @@ var _ = Describe("handler", func() {
 
 			close(start)
 
-			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second / 2))
+			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second/2))
 		})
 
 		It("limits a call to the server by the server timeout when the clients' timeout is longer", func() {
@@ -390,7 +390,7 @@ var _ = Describe("handler", func() {
 
 			close(start)
 
-			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second / 2))
+			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second/2))
 		})
 
 		It("limits a call to the server by the clients' timeout when the servers' timeout is not set", func() {
@@ -417,7 +417,7 @@ var _ = Describe("handler", func() {
 
 			close(start)
 
-			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second / 2))
+			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second/2))
 		})
 
 	})
