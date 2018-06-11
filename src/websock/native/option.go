@@ -2,9 +2,11 @@ package native
 
 import "time"
 
-type option func(*visitor)
+// Option is used to configure the Handler
+type Option func(*visitor)
 
-func MaxSyncCallTimeout(max time.Duration) option {
+// MaxSyncCallTimeout sets the maximum time a call can be
+func MaxSyncCallTimeout(max time.Duration) Option {
 	return func(v *visitor) {
 		v.syncCallTimeout = max
 	}

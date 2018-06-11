@@ -12,7 +12,10 @@ import (
 
 const protocolPrefix = "rinq-1.0+"
 
-func NewHandler(peer rinq.Peer, encoding message.Encoding, options ...option) Handler {
+// NewHandler returns a handler that takes control of websockets passed into the Handle
+// method and interprets all frames passed through as rinq messages encoded using
+// the given encoding
+func NewHandler(peer rinq.Peer, encoding message.Encoding, options ...Option) Handler {
 
 	return Handler{
 		Peer:       peer,
@@ -28,7 +31,7 @@ type Handler struct {
 	Encoding message.Encoding
 	Logger   *log.Logger
 
-	visitorOpt []option
+	visitorOpt []Option
 }
 
 // Protocol returns the name of the WebSocket sub-protocol supported by this

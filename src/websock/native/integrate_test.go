@@ -75,8 +75,8 @@ var _ = Describe("handler", func() {
 
 			websocket *mockWebsock
 
-			start func()
-			kill  context.CancelFunc
+			start chan struct{}
+			kill  chan struct{}
 		)
 
 		BeforeEach(func() {
@@ -85,15 +85,12 @@ var _ = Describe("handler", func() {
 
 			subject = native.NewHandler(peer, message.JSONEncoding)
 
-			var killCtx context.Context
-			killCtx, kill = context.WithTimeout(context.Background(), 1*time.Second)
-
-			var startCtx context.Context
-			startCtx, start = context.WithCancel(killCtx)
+			start = make(chan struct{})
+			kill = make(chan struct{})
 
 			websocket = &mockWebsock{
-				ctx:   killCtx,
-				start: startCtx.Done(),
+				start: start,
+				dead:  kill,
 				wIn:   make(chan []byte),
 			}
 
@@ -102,15 +99,14 @@ var _ = Describe("handler", func() {
 			go func() {
 				defer GinkgoRecover()
 
+				<-start
 				err := subject.Handle(websocket, req)
 				log.Println("got", err.Error(), ", handler closed")
 			}()
-
 		})
 
 		AfterEach(func() {
-			kill()
-
+			close(kill)
 			peer.Stop()
 			<-peer.Done()
 		})
@@ -129,7 +125,7 @@ var _ = Describe("handler", func() {
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
-				start()
+				close(start)
 
 				resp := websocket.getMsg()
 
@@ -144,7 +140,7 @@ var _ = Describe("handler", func() {
 					ns, cmd, time.Second,
 				}, "payload!")
 
-				start()
+				close(start)
 
 				resp := websocket.getMsg()
 
@@ -157,12 +153,15 @@ var _ = Describe("handler", func() {
 				websocket.queueMsg(createSession, session, nil, nil)
 				websocket.queueMsg(callExec, session, []interface{}{
 					ns, cmd,
-				}, "payload!")
+				}, nil)
 
-				start()
+				close(start)
 
-				msg := websocket.getMsg()
-				Expect(msg).To(BeNil())
+				select {
+				case <-websocket.wIn:
+					Fail("Received a response to an exec")
+				case <-time.After(time.Second):
+				}
 			})
 		})
 
@@ -187,7 +186,7 @@ var _ = Describe("handler", func() {
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
-				start()
+				close(start)
 
 				resp := websocket.getMsg()
 
@@ -204,7 +203,7 @@ var _ = Describe("handler", func() {
 					ns, cmd, time.Second,
 				}, nil)
 
-				start()
+				close(start)
 
 				resp := websocket.getMsg()
 
@@ -221,10 +220,13 @@ var _ = Describe("handler", func() {
 					ns, cmd,
 				}, nil)
 
-				start()
+				close(start)
 
-				msg := websocket.getMsg()
-				Expect(msg).To(BeNil())
+				select {
+				case <-websocket.wIn:
+					Fail("Received a response to an exec")
+				case <-time.After(time.Second):
+				}
 			})
 		})
 
@@ -242,7 +244,7 @@ var _ = Describe("handler", func() {
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
-				start()
+				close(start)
 
 				resp := websocket.getMsg()
 
@@ -259,7 +261,7 @@ var _ = Describe("handler", func() {
 					ns, cmd, time.Second,
 				}, nil)
 
-				start()
+				close(start)
 
 				resp := websocket.getMsg()
 
@@ -276,10 +278,13 @@ var _ = Describe("handler", func() {
 					ns, cmd,
 				}, nil)
 
-				start()
+				close(start)
 
-				msg := websocket.getMsg()
-				Expect(msg).To(BeNil())
+				select {
+				case <-websocket.wIn:
+					Fail("Received a response to an exec")
+				case <-time.After(time.Second):
+				}
 			})
 		})
 	})
@@ -292,8 +297,8 @@ var _ = Describe("handler", func() {
 
 			websocket *mockWebsock
 
-			start func()
-			kill  func()
+			start chan struct{}
+			end   chan struct{}
 		)
 
 		const (
@@ -307,22 +312,19 @@ var _ = Describe("handler", func() {
 			ns = nsBase + uuid.NewV4().String()
 			log.Println("listening on", ns)
 
-			var killCtx context.Context
-			killCtx, kill = context.WithCancel(context.Background())
-
-			var startCtx context.Context
-			startCtx, start = context.WithCancel(context.Background())
+			start = make(chan struct{})
+			end = make(chan struct{})
 
 			websocket = &mockWebsock{
-				ctx:   killCtx,
-				start: startCtx.Done(),
+				start: start,
+				dead:  end,
 				wIn:   make(chan []byte),
 			}
 
 			go func() {
 				defer GinkgoRecover()
 
-				<-startCtx.Done()
+				<-start
 
 				err := subject.Handle(websocket, req)
 				log.Println("got", err.Error(), ", handler closed")
@@ -331,6 +333,7 @@ var _ = Describe("handler", func() {
 
 		AfterEach(func() {
 			websocket = nil
+			close(end)
 		})
 
 		It("limits a call to the server by the client timeout when the servers' timeout is longer", func() {
@@ -357,7 +360,7 @@ var _ = Describe("handler", func() {
 
 			expectedTime := time.Now().Add(clientTimeout * time.Millisecond)
 
-			start()
+			close(start)
 
 			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second*1))
 		})
@@ -385,7 +388,7 @@ var _ = Describe("handler", func() {
 
 			expectedTime := time.Now().Add(serverTimeout)
 
-			start()
+			close(start)
 
 			Expect(<-deadline).To(BeTemporally("~", expectedTime))
 		})
@@ -412,7 +415,7 @@ var _ = Describe("handler", func() {
 
 			expectedTime := time.Now().Add(clientTimeout * time.Millisecond)
 
-			start()
+			close(start)
 
 			Expect(<-deadline).To(BeTemporally("~", expectedTime))
 		})
@@ -447,8 +450,8 @@ func msg(msgType uint16, session uint16, headers interface{}, payload interface{
 }
 
 type mockWebsock struct {
-	ctx   context.Context
 	start <-chan struct{}
+	dead  <-chan struct{}
 
 	rOut []io.Reader
 	wIn  chan []byte
@@ -463,8 +466,8 @@ func (m *mockWebsock) NextReader() (out io.Reader, err error) {
 	<-m.start
 
 	if len(m.rOut) == 0 {
-		<-m.ctx.Done()
-		return nil, m.ctx.Err()
+		<-m.dead
+		return nil, context.Canceled
 	}
 
 	out, m.rOut = m.rOut[0], m.rOut[1:]
@@ -473,7 +476,7 @@ func (m *mockWebsock) NextReader() (out io.Reader, err error) {
 
 func (m *mockWebsock) getMsg() []byte {
 	select {
-	case <-m.ctx.Done():
+	case <-m.dead:
 		return nil
 	case b := <-m.wIn:
 		return b
