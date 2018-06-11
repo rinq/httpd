@@ -70,7 +70,7 @@ var _ = Describe("handler", func() {
 		)
 
 		var (
-			ns      string
+			ns string
 
 			websocket *mockWebsock
 
