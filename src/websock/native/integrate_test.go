@@ -288,7 +288,7 @@ var _ = Describe("handler", func() {
 	Context("integration testing with a timeout", func() {
 
 		var (
-			subject native.Handler
+			subject *native.Handler
 			ns      string
 
 			websocket *mockWebsock
@@ -347,7 +347,7 @@ var _ = Describe("handler", func() {
 			clientTimeout := time.Duration(2000)
 			serverTimeout := 10 * time.Second
 
-			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxSyncCallTimeout(serverTimeout))
+			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
 
 			websocket.queueMsg(createSession, session, nil, nil)
 			websocket.queueMsg(callSync, session, []interface{}{
@@ -375,7 +375,7 @@ var _ = Describe("handler", func() {
 			clientTimeout := time.Duration(10000)
 			serverTimeout := time.Duration(2000) * time.Millisecond
 
-			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxSyncCallTimeout(serverTimeout))
+			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
 
 			websocket.queueMsg(createSession, session, nil, nil)
 			websocket.queueMsg(callSync, session, []interface{}{
