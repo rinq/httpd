@@ -22,9 +22,6 @@ import (
 	"time"
 )
 
-// absolute hack to get around nil being a valid value
-var noBody *struct{ Foo string } = nil
-
 var _ = Describe("handler", func() {
 
 	var (
@@ -36,17 +33,9 @@ var _ = Describe("handler", func() {
 	const (
 		createSession uint16 = 'S'<<8 | 'C'
 
-		callSync        uint16 = 'C'<<8 | 'C'
-		callSyncSuccess uint16 = 'C'<<8 | 'S'
-		callSyncFailure uint16 = 'C'<<8 | 'F'
-		callSyncError   uint16 = 'C'<<8 | 'E'
-
-		callAsync        uint16 = 'A'<<8 | 'C'
-		callAsyncSuccess uint16 = 'A'<<8 | 'S'
-		callAsyncFailure uint16 = 'A'<<8 | 'F'
-		callAsyncError   uint16 = 'A'<<8 | 'E'
-
-		callExec uint16 = 'C'<<8 | 'X'
+		callSync  uint16 = 'C'<<8 | 'C'
+		callAsync uint16 = 'A'<<8 | 'C'
+		callExec  uint16 = 'C'<<8 | 'X'
 
 		session uint16 = 0xCAFE
 	)
@@ -86,9 +75,9 @@ var _ = Describe("handler", func() {
 			kill = make(chan struct{})
 
 			websocket = &mockWebsock{
-				start: start,
-				dead:  kill,
-				wIn:   make(chan []byte),
+				start:       start,
+				dead:        kill,
+				serverResps: make(chan []byte),
 			}
 
 			go func() {
@@ -116,45 +105,54 @@ var _ = Describe("handler", func() {
 			})
 
 			It("Sends a successful basic sync ping-pong message", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callSync, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callSync, session, []interface{}{
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
 				close(start)
 
-				resp := websocket.getMsg()
+				resp := websocket.responseFromServer()
 
-				expected := msg(callSyncSuccess, session, []interface{}{seq}, respBody)
+				expected := &message.SyncSuccess{}
+				expected.Session = message.SessionIndex(session)
+				expected.Seq = seq
+				expected.Payload = rinq.NewPayload(respBody)
 
-				Expect(resp).To(Equal(expected))
+				expBytes := serializeServerResp(expected)
+				Expect(resp).To(Equal(expBytes))
 			})
 
 			It("Sends a successful basic async ping-pong message", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callAsync, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callAsync, session, []interface{}{
 					ns, cmd, time.Second,
 				}, "payload!")
 
 				close(start)
 
-				resp := websocket.getMsg()
+				resp := websocket.responseFromServer()
 
-				expected := msg(callAsyncSuccess, session, []interface{}{ns, cmd}, respBody)
+				expected := &message.AsyncSuccess{}
+				expected.Session = message.SessionIndex(session)
+				expected.Namespace = ns
+				expected.Command = cmd
+				expected.Payload = rinq.NewPayload(respBody)
 
-				Expect(resp).To(Equal(expected))
+				expBytes := serializeServerResp(expected)
+				Expect(resp).To(Equal(expBytes))
 			})
 
 			It("Sends a successful basic exec message", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callExec, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callExec, session, []interface{}{
 					ns, cmd,
 				}, nil)
 
 				close(start)
 
 				select {
-				case <-websocket.wIn:
+				case <-websocket.serverResps:
 					Fail("Received a response to an exec")
 				case <-time.After(time.Second):
 				}
@@ -163,63 +161,71 @@ var _ = Describe("handler", func() {
 
 		Context("failure calls", func() {
 			var (
-				failureMessageStatic = "failed"
+				failureType = "failed"
 
-				failureMessageTemplate = "%s-%s"
-				failureMessageValues   = []interface{}{"namespace", "cmd"}
-				failureMessageResolved = fmt.Sprintf(failureMessageTemplate, failureMessageValues...)
+				failureTemplate = "%s-%s"
+				failureValues   = []interface{}{"namespace", "cmd"}
+				failureMessage  = fmt.Sprintf(failureTemplate, failureValues...)
 			)
+
 			BeforeEach(func() {
 				peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
 					defer req.Payload.Close()
-					res.Fail(failureMessageStatic, failureMessageTemplate, failureMessageValues...)
+					res.Fail(failureType, failureTemplate, failureValues...)
 				})
 			})
 
 			It("Sends a basic sync ping-pong message that fails", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callSync, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callSync, session, []interface{}{
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
 				close(start)
 
-				resp := websocket.getMsg()
+				resp := websocket.responseFromServer()
 
-				expected := msg(callSyncFailure, session, []interface{}{
-					seq, failureMessageStatic, failureMessageResolved,
-				}, nil)
+				expected := &message.SyncFailure{}
+				expected.Session = message.SessionIndex(session)
+				expected.Seq = seq
+				expected.FailureType = failureType
+				expected.FailureMessage = failureMessage
 
-				Expect(resp).To(Equal(expected))
+				expBytes := serializeServerResp(expected)
+				Expect(resp).To(Equal(expBytes))
 			})
 
 			It("Sends a basic async ping-pong message that fails", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callAsync, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callAsync, session, []interface{}{
 					ns, cmd, time.Second,
 				}, nil)
 
 				close(start)
 
-				resp := websocket.getMsg()
+				resp := websocket.responseFromServer()
 
-				expected := msg(callAsyncFailure, session, []interface{}{
-					ns, cmd, failureMessageStatic, failureMessageResolved,
-				}, nil)
+				expected := &message.AsyncFailure{}
+				expected.Session = message.SessionIndex(session)
+				expected.Namespace = ns
+				expected.Command = cmd
+				expected.FailureType = failureType
+				expected.FailureMessage = failureMessage
 
-				Expect(resp).To(Equal(expected))
+				expBytes := serializeServerResp(expected)
+				Expect(resp).To(Equal(expBytes))
 			})
 
 			It("Sends a basic exec message that fails", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callExec, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callExec, session, []interface{}{
 					ns, cmd,
 				}, nil)
 
 				close(start)
 
 				select {
-				case <-websocket.wIn:
+				case <-websocket.serverResps:
 					Fail("Received a response to an exec")
 				case <-time.After(time.Second):
 				}
@@ -235,49 +241,53 @@ var _ = Describe("handler", func() {
 			})
 
 			It("Sends a basic sync ping-pong message that fails", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callSync, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callSync, session, []interface{}{
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
 				close(start)
 
-				resp := websocket.getMsg()
+				resp := websocket.responseFromServer()
 
-				expected := msg(callSyncError, session, []interface{}{
-					seq,
-				}, noBody)
+				expected := &message.SyncError{}
+				expected.Session = message.SessionIndex(session)
+				expected.Seq = seq
 
-				Expect(resp).To(Equal(expected))
+				expBytes := serializeServerResp(expected)
+
+				Expect(resp).To(Equal(expBytes))
 			})
 
 			It("Sends a basic async ping-pong message that fails", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callAsync, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callAsync, session, []interface{}{
 					ns, cmd, time.Second,
 				}, nil)
 
 				close(start)
 
-				resp := websocket.getMsg()
+				resp := websocket.responseFromServer()
 
-				expected := msg(callAsyncError, session, []interface{}{
-					ns, cmd,
-				}, noBody)
+				expected := &message.AsyncError{}
+				expected.Session = message.SessionIndex(session)
+				expected.Namespace = ns
+				expected.Command = cmd
 
-				Expect(resp).To(Equal(expected))
+				expBytes := serializeServerResp(expected)
+				Expect(resp).To(Equal(expBytes))
 			})
 
 			It("Sends a basic exec message that fails", func() {
-				websocket.queueMsg(createSession, session, nil, nil)
-				websocket.queueMsg(callExec, session, []interface{}{
+				websocket.requestFromClient(createSession, session, nil, nil)
+				websocket.requestFromClient(callExec, session, []interface{}{
 					ns, cmd,
 				}, nil)
 
 				close(start)
 
 				select {
-				case <-websocket.wIn:
+				case <-websocket.serverResps:
 					Fail("Received a response to an exec")
 				case <-time.After(time.Second):
 				}
@@ -312,9 +322,9 @@ var _ = Describe("handler", func() {
 			end = make(chan struct{})
 
 			websocket = &mockWebsock{
-				start: start,
-				dead:  end,
-				wIn:   make(chan []byte),
+				start:       start,
+				dead:        end,
+				serverResps: make(chan []byte),
 			}
 
 			go func() {
@@ -349,8 +359,8 @@ var _ = Describe("handler", func() {
 
 			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
 
-			websocket.queueMsg(createSession, session, nil, nil)
-			websocket.queueMsg(callSync, session, []interface{}{
+			websocket.requestFromClient(createSession, session, nil, nil)
+			websocket.requestFromClient(callSync, session, []interface{}{
 				seq, ns, cmd, clientTimeout,
 			}, "ping")
 
@@ -377,8 +387,8 @@ var _ = Describe("handler", func() {
 
 			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
 
-			websocket.queueMsg(createSession, session, nil, nil)
-			websocket.queueMsg(callSync, session, []interface{}{
+			websocket.requestFromClient(createSession, session, nil, nil)
+			websocket.requestFromClient(callSync, session, []interface{}{
 				seq, ns, cmd, clientTimeout,
 			}, "ping")
 
@@ -404,8 +414,8 @@ var _ = Describe("handler", func() {
 
 			subject = native.NewHandler(peer, message.JSONEncoding)
 
-			websocket.queueMsg(createSession, session, nil, nil)
-			websocket.queueMsg(callSync, session, []interface{}{
+			websocket.requestFromClient(createSession, session, nil, nil)
+			websocket.requestFromClient(callSync, session, []interface{}{
 				seq, ns, cmd, clientTimeout,
 			}, "ping")
 
@@ -419,7 +429,14 @@ var _ = Describe("handler", func() {
 	})
 })
 
-func msg(msgType uint16, session uint16, headers interface{}, payload interface{}) []byte {
+func serializeServerResp(outgoing message.Outgoing) []byte {
+	expBytes := new(bytes.Buffer)
+	err := message.Write(expBytes, message.JSONEncoding, outgoing)
+	Expect(err).NotTo(HaveOccurred())
+	return expBytes.Bytes()
+}
+
+func constructClientReq(msgType uint16, session uint16, headers interface{}, payload interface{}) []byte {
 
 	buff := new(bytes.Buffer)
 
@@ -434,11 +451,9 @@ func msg(msgType uint16, session uint16, headers interface{}, payload interface{
 			panic(err)
 		}
 
-		if payload != noBody {
-			p := rinq.NewPayload(payload)
-			if err := message.JSONEncoding.EncodePayload(buff, p); err != nil {
-				panic(err)
-			}
+		p := rinq.NewPayload(payload)
+		if err := message.JSONEncoding.EncodePayload(buff, p); err != nil {
+			panic(err)
 		}
 	}
 
@@ -449,32 +464,32 @@ type mockWebsock struct {
 	start <-chan struct{}
 	dead  <-chan struct{}
 
-	rOut []io.Reader
-	wIn  chan []byte
+	clientReqs  []io.Reader
+	serverResps chan []byte
 }
 
-func (m *mockWebsock) queueMsg(msgType uint16, session uint16, headers interface{}, payload interface{}) {
-	out := msg(msgType, session, headers, payload)
-	(*m).rOut = append((*m).rOut, bytes.NewBuffer(out))
+func (m *mockWebsock) requestFromClient(msgType uint16, session uint16, headers interface{}, payload interface{}) {
+	out := constructClientReq(msgType, session, headers, payload)
+	m.clientReqs = append(m.clientReqs, bytes.NewBuffer(out))
 }
 
 func (m *mockWebsock) NextReader() (out io.Reader, err error) {
 	<-m.start
 
-	if len(m.rOut) == 0 {
+	if len(m.clientReqs) == 0 {
 		<-m.dead
 		return nil, context.Canceled
 	}
 
-	out, m.rOut = m.rOut[0], m.rOut[1:]
+	out, m.clientReqs = m.clientReqs[0], m.clientReqs[1:]
 	return out, nil
 }
 
-func (m *mockWebsock) getMsg() []byte {
+func (m *mockWebsock) responseFromServer() []byte {
 	select {
 	case <-m.dead:
 		return nil
-	case b := <-m.wIn:
+	case b := <-m.serverResps:
 		return b
 	}
 }
@@ -487,7 +502,7 @@ func (m *mockWebsock) NextWriter() (out io.WriteCloser, err error) {
 	w := make(chan struct{})
 	go func() {
 		<-w
-		m.wIn <- b.Buffer.Bytes()
+		m.serverResps <- b.Buffer.Bytes()
 	}()
 
 	b.cls = func() {
