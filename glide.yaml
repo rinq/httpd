@@ -14,3 +14,4 @@ import:
 - package: github.com/ugorji/go
   subpackages:
   - codec
+- package: github.com/alecthomas/units
