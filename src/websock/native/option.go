@@ -1,8 +1,8 @@
 package native
 
 import (
-	"time"
 	"golang.org/x/sync/semaphore"
+	"time"
 )
 
 // Option modifies how a given Handler handles messages from Rinq connections that the Handler manages.
@@ -33,7 +33,6 @@ func (m *maxCallTimeout) setTimeout(v *visitor) {
 	v.syncCallTimeout = m.max
 }
 
-
 // MaxConcurrentCalls sets the maximum number of calls that will be processed concurrently. Any calls that
 // are received while the Handler is at capacity will not be processed until there is spare capacity.
 // Time waiting for spare capacity counts as part of against the message timeout.
@@ -53,4 +52,3 @@ func (m maxConcurrentCalls) modify(h *Handler) {
 		v.syncCallCap = cl
 	})
 }
-

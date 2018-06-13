@@ -21,8 +21,8 @@ var _ websock.Handler = (*Handler)(nil)
 func NewHandler(peer rinq.Peer, encoding message.Encoding, options ...Option) *Handler {
 
 	h := &Handler{
-		Peer:       peer,
-		Encoding:   encoding,
+		Peer:     peer,
+		Encoding: encoding,
 	}
 
 	for _, opt := range options {
