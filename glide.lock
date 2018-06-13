@@ -1,5 +1,5 @@
-hash: 590bf58ba5bf490bb0b31ffc181add4ac4d18a2745f1c053825bd20bb18bf3c9
-updated: 2018-06-11T15:15:54.346229+10:00
+hash: 02317491cc259211d7f40351e3224feb47d90c9ca5e52e2f63b7b23802990ea5
+updated: 2018-06-13T09:43:11.82419+10:00
 imports:
 - name: github.com/golang/gddo
   version: a154dc8b46f4e499724277f2ff2e9b41b959198d
@@ -31,7 +31,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 7ac6b01f7d376befdf752224be59eed5d21fab4b
+  version: 41673fd8f03bf7bab82cf50741d447064926bb84
   subpackages:
   - format
   - internal/assertion
@@ -96,6 +96,10 @@ imports:
   - internal/timeseries
   - lex/httplex
   - trace
+- name: golang.org/x/sync
+  version: 1d60e4601c6fd243af51cc01ddf169918a5407ca
+  subpackages:
+  - semaphore
 testImports:
 - name: golang.org/x/sys
   version: 2320a9c15898af1b1b24f99700d5c1e957f9d8cf
