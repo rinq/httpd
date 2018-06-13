@@ -154,7 +154,7 @@ var _ = Describe("handler", func() {
 				select {
 				case <-websocket.serverResps:
 					Fail("Received a response to an exec")
-				case <-time.After(time.Second):
+				case <-time.After(time.Second / 4):
 				}
 			})
 		})
@@ -227,7 +227,7 @@ var _ = Describe("handler", func() {
 				select {
 				case <-websocket.serverResps:
 					Fail("Received a response to an exec")
-				case <-time.After(time.Second):
+				case <-time.After(time.Second / 4):
 				}
 			})
 		})
@@ -289,7 +289,7 @@ var _ = Describe("handler", func() {
 				select {
 				case <-websocket.serverResps:
 					Fail("Received a response to an exec")
-				case <-time.After(time.Second):
+				case <-time.After(time.Second / 4):
 				}
 			})
 		})
