@@ -17,15 +17,14 @@ import (
 	"github.com/satori/go.uuid"
 	"io"
 	"log"
-	"time"
 	"net/http/httptest"
+	"time"
 )
 
 var _ = Describe("the native Handlers' integration between rinq and websockets", func() {
 
 	var (
 		peer rinq.Peer
-
 	)
 
 	const (
