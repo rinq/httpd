@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/rinq/rinq-go/src/rinq"
@@ -191,6 +192,18 @@ var _ = Describe("NewSyncResponse", func() {
 
 	It("returns false for other errors", func() {
 		err := errors.New("error")
+		m, ok := NewSyncResponse(0xabcd, 123, nil, err)
+
+		Expect(m).To(BeNil())
+		Expect(ok).To(BeFalse())
+	})
+
+	It("returns false for context timeouts", func() {
+		// if you're reading this - there's a strong chance you'll need
+		// to update any code that relies on the fact that the client
+		// doesn't currently receive timeout errors from the websocket
+		// server
+		err := context.DeadlineExceeded
 		m, ok := NewSyncResponse(0xabcd, 123, nil, err)
 
 		Expect(m).To(BeNil())

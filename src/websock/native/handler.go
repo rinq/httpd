@@ -12,12 +12,29 @@ import (
 
 const protocolPrefix = "rinq-1.0+"
 
+var _ websock.Handler = (*Handler)(nil)
+
+// NewHandler returns a websock.Handler that implements Rinq's native websocket protocol.
+// The native protocol allows for several different frame-level encodings. Each handler
+// instance supports one of these encodings, the choice of which affects the websocket
+// sub-protocol that the handler advertises itself as supporting.
+func NewHandler(peer rinq.Peer, encoding message.Encoding, options ...Option) *Handler {
+
+	return &Handler{
+		Peer:       peer,
+		Encoding:   encoding,
+		visitorOpt: options,
+	}
+}
+
 // Handler is an implementation of websock.Handler that handles connections that
 // use Rinq's "native" subprotocol.
 type Handler struct {
 	Peer     rinq.Peer
 	Encoding message.Encoding
 	Logger   *log.Logger
+
+	visitorOpt []Option
 }
 
 // Protocol returns the name of the WebSocket sub-protocol supported by this
@@ -42,6 +59,10 @@ func (h *Handler) Handle(c websock.Connection, r *http.Request) error {
 			}
 		},
 	)
+
+	for _, opt := range h.visitorOpt {
+		opt.modify(v)
+	}
 
 	for {
 		r, err := c.NextReader()

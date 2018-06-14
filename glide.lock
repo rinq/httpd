@@ -1,16 +1,16 @@
-hash: 1428e2fa6a74d2a2355ff1650598a455e2ce2f2bde57530d54a29946a51abef2
-updated: 2018-05-28T15:45:48.471506+10:00
+hash: 590bf58ba5bf490bb0b31ffc181add4ac4d18a2745f1c053825bd20bb18bf3c9
+updated: 2018-06-11T15:15:54.346229+10:00
 imports:
 - name: github.com/golang/gddo
-  version: 9125e5a0ecc76de82a532a98dcf25f21dcdda00a
+  version: a154dc8b46f4e499724277f2ff2e9b41b959198d
   subpackages:
   - httputil/header
 - name: github.com/gorilla/websocket
   version: ea4d1f681babbce9545c9c5f3d5194a789c89f5b
 - name: github.com/hashicorp/go-version
-  version: fc61389e27c71d120f87031ca8c88a3428f372dd
+  version: 23480c0665776210b5fbbac6eaaee40e3e6a96b7
 - name: github.com/onsi/ginkgo
-  version: 26d21430af911e84459ee38099f0a07e57a7f9b0
+  version: c73579c58881b5ba90d3b08f6ac59cb1c909d6dd
   subpackages:
   - config
   - extensions/table
@@ -74,10 +74,12 @@ imports:
   - src/rinqamqp/internal/amqputil
   - src/rinqamqp/internal/commandamqp
   - src/rinqamqp/internal/notifyamqp
+- name: github.com/satori/go.uuid
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/streadway/amqp
-  version: 8e4aba63da9fc5571e01c6a45dc809a58cbc5a68
+  version: e5adc2ada8b8efff032bf61173a233d143e9318e
 - name: github.com/ugorji/go
-  version: 16373bd7016380b084e8a4e8f9560efe82cbc98c
+  version: f3cacc17c85ecb7f1b6a9e373ee85d1480919868
   subpackages:
   - codec
 - name: golang.org/x/net

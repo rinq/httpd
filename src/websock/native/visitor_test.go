@@ -71,7 +71,7 @@ var _ = Describe("visitor", func() {
 		msg.Seq = 123
 		msg.Namespace = "ns"
 		msg.Command = "cmd"
-		msg.Timeout = 456 * time.Millisecond
+		msg.Timeout = 456 * time.Hour
 		msg.Payload = rinq.NewPayload("payload")
 
 		It("returns an error if the session index is not in use", func() {
