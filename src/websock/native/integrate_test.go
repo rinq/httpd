@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-var _ = Describe("handler", func() {
+var _ = Describe("the native Handlers' integration between rinq and websockets", func() {
 
 	var (
 		peer rinq.Peer
@@ -48,7 +48,7 @@ var _ = Describe("handler", func() {
 		Expect(err).ToNot(HaveOccurred())
 	})
 
-	Context("integration testing the default settings", func() {
+	Context("when all settings for the websocket are defaulted", func() {
 
 		const (
 			nsBase      = "name-space"
@@ -96,7 +96,7 @@ var _ = Describe("handler", func() {
 			<-peer.Done()
 		})
 
-		Context("successful calls", func() {
+		Context("and the receiving end responds with a payload", func() {
 			BeforeEach(func() {
 				peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
 					defer req.Payload.Close()
@@ -104,15 +104,15 @@ var _ = Describe("handler", func() {
 				})
 			})
 
-			It("Sends a successful basic sync ping-pong message", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callSync, session, []interface{}{
+			It("forwards the payload to the websocket when the command is called synchronously", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callSync, session, []interface{}{
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
 				close(start)
 
-				resp := websocket.responseFromServer()
+				resp := websocket.serverResponse()
 
 				expected := &message.SyncSuccess{}
 				expected.Session = message.SessionIndex(session)
@@ -123,15 +123,15 @@ var _ = Describe("handler", func() {
 				Expect(resp).To(Equal(expBytes))
 			})
 
-			It("Sends a successful basic async ping-pong message", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callAsync, session, []interface{}{
+			It("forwards the payload to the websocket when the command is called asynchronously", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callAsync, session, []interface{}{
 					ns, cmd, time.Second,
 				}, "payload!")
 
 				close(start)
 
-				resp := websocket.responseFromServer()
+				resp := websocket.serverResponse()
 
 				expected := &message.AsyncSuccess{}
 				expected.Session = message.SessionIndex(session)
@@ -143,9 +143,9 @@ var _ = Describe("handler", func() {
 				Expect(resp).To(Equal(expBytes))
 			})
 
-			It("Sends a successful basic exec message", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callExec, session, []interface{}{
+			It("doesn't forward anything to the websocket when a command is executed", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callExec, session, []interface{}{
 					ns, cmd,
 				}, nil)
 
@@ -159,7 +159,7 @@ var _ = Describe("handler", func() {
 			})
 		})
 
-		Context("failure calls", func() {
+		Context("and the receiving end responds with a failure", func() {
 			var (
 				failureType = "failed"
 
@@ -175,15 +175,15 @@ var _ = Describe("handler", func() {
 				})
 			})
 
-			It("Sends a basic sync ping-pong message that fails", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callSync, session, []interface{}{
+			It("forwards the failure type and message to the websocket when the command is called synchronously", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callSync, session, []interface{}{
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
 				close(start)
 
-				resp := websocket.responseFromServer()
+				resp := websocket.serverResponse()
 
 				expected := &message.SyncFailure{}
 				expected.Session = message.SessionIndex(session)
@@ -195,15 +195,15 @@ var _ = Describe("handler", func() {
 				Expect(resp).To(Equal(expBytes))
 			})
 
-			It("Sends a basic async ping-pong message that fails", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callAsync, session, []interface{}{
+			It("forwards the failure type and message to the websocket when the command is called asynchronously", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callAsync, session, []interface{}{
 					ns, cmd, time.Second,
 				}, nil)
 
 				close(start)
 
-				resp := websocket.responseFromServer()
+				resp := websocket.serverResponse()
 
 				expected := &message.AsyncFailure{}
 				expected.Session = message.SessionIndex(session)
@@ -216,9 +216,9 @@ var _ = Describe("handler", func() {
 				Expect(resp).To(Equal(expBytes))
 			})
 
-			It("Sends a basic exec message that fails", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callExec, session, []interface{}{
+			It("doesn't forward anything to the websocket when a command is executed", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callExec, session, []interface{}{
 					ns, cmd,
 				}, nil)
 
@@ -232,7 +232,7 @@ var _ = Describe("handler", func() {
 			})
 		})
 
-		Context("error calls", func() {
+		Context("and the receiving end responds with an error", func() {
 			BeforeEach(func() {
 				peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
 					defer req.Payload.Close()
@@ -240,15 +240,15 @@ var _ = Describe("handler", func() {
 				})
 			})
 
-			It("Sends a basic sync ping-pong message that fails", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callSync, session, []interface{}{
+			It("forwards an opaque error message to the websocket when the command is called synchronously", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callSync, session, []interface{}{
 					seq, ns, cmd, time.Second,
 				}, "ping")
 
 				close(start)
 
-				resp := websocket.responseFromServer()
+				resp := websocket.serverResponse()
 
 				expected := &message.SyncError{}
 				expected.Session = message.SessionIndex(session)
@@ -259,15 +259,15 @@ var _ = Describe("handler", func() {
 				Expect(resp).To(Equal(expBytes))
 			})
 
-			It("Sends a basic async ping-pong message that fails", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callAsync, session, []interface{}{
+			It("forwards an opaque error message to the websocket when the command is called asynchronously", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callAsync, session, []interface{}{
 					ns, cmd, time.Second,
 				}, nil)
 
 				close(start)
 
-				resp := websocket.responseFromServer()
+				resp := websocket.serverResponse()
 
 				expected := &message.AsyncError{}
 				expected.Session = message.SessionIndex(session)
@@ -278,9 +278,9 @@ var _ = Describe("handler", func() {
 				Expect(resp).To(Equal(expBytes))
 			})
 
-			It("Sends a basic exec message that fails", func() {
-				websocket.requestFromClient(createSession, session, nil, nil)
-				websocket.requestFromClient(callExec, session, []interface{}{
+			It("doesn't forward anything to the websocket when a command is executed", func() {
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callExec, session, []interface{}{
 					ns, cmd,
 				}, nil)
 
@@ -295,7 +295,7 @@ var _ = Describe("handler", func() {
 		})
 	})
 
-	Context("integration testing with a timeout", func() {
+	Context("when a timeout is set on the websocket", func() {
 
 		var (
 			subject *native.Handler
@@ -359,8 +359,8 @@ var _ = Describe("handler", func() {
 
 			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
 
-			websocket.requestFromClient(createSession, session, nil, nil)
-			websocket.requestFromClient(callSync, session, []interface{}{
+			websocket.clientCalls(createSession, session, nil, nil)
+			websocket.clientCalls(callSync, session, []interface{}{
 				seq, ns, cmd, clientTimeout,
 			}, "ping")
 
@@ -387,8 +387,8 @@ var _ = Describe("handler", func() {
 
 			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
 
-			websocket.requestFromClient(createSession, session, nil, nil)
-			websocket.requestFromClient(callSync, session, []interface{}{
+			websocket.clientCalls(createSession, session, nil, nil)
+			websocket.clientCalls(callSync, session, []interface{}{
 				seq, ns, cmd, clientTimeout,
 			}, "ping")
 
@@ -414,8 +414,8 @@ var _ = Describe("handler", func() {
 
 			subject = native.NewHandler(peer, message.JSONEncoding)
 
-			websocket.requestFromClient(createSession, session, nil, nil)
-			websocket.requestFromClient(callSync, session, []interface{}{
+			websocket.clientCalls(createSession, session, nil, nil)
+			websocket.clientCalls(callSync, session, []interface{}{
 				seq, ns, cmd, clientTimeout,
 			}, "ping")
 
@@ -468,7 +468,7 @@ type mockWebsock struct {
 	serverResps chan []byte
 }
 
-func (m *mockWebsock) requestFromClient(msgType uint16, session uint16, headers interface{}, payload interface{}) {
+func (m *mockWebsock) clientCalls(msgType uint16, session uint16, headers interface{}, payload interface{}) {
 	out := constructClientReq(msgType, session, headers, payload)
 	m.clientReqs = append(m.clientReqs, bytes.NewBuffer(out))
 }
@@ -485,7 +485,7 @@ func (m *mockWebsock) NextReader() (out io.Reader, err error) {
 	return out, nil
 }
 
-func (m *mockWebsock) responseFromServer() []byte {
+func (m *mockWebsock) serverResponse() []byte {
 	select {
 	case <-m.dead:
 		return nil
