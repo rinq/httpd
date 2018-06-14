@@ -17,9 +17,8 @@ import (
 	"github.com/satori/go.uuid"
 	"io"
 	"log"
-	"net/http"
-	"net/http/httptest"
 	"time"
+	"net/http/httptest"
 )
 
 var _ = Describe("the native Handlers' integration between rinq and websockets", func() {
@@ -27,7 +26,6 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 	var (
 		peer rinq.Peer
 
-		req *http.Request
 	)
 
 	const (
@@ -41,7 +39,6 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 	)
 
 	BeforeEach(func() {
-		req = httptest.NewRequest("GET", "/", nil)
 
 		var err error
 		peer, err = rinqamqp.DialEnv(options.Logger(rinq.NewLogger(false)))
@@ -85,7 +82,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 				<-start
 				handler := native.NewHandler(peer, message.JSONEncoding)
-				err := handler.Handle(websocket, req)
+				err := handler.Handle(websocket, httptest.NewRequest("GET", "/", nil))
 				log.Println("got", err.Error(), ", handler closed")
 			}()
 		})
@@ -332,7 +329,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 				<-start
 
-				err := subject.Handle(websocket, req)
+				err := subject.Handle(websocket, httptest.NewRequest("GET", "/", nil))
 				log.Println("got", err.Error(), ", handler closed")
 			}()
 		})
