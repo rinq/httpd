@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/alecthomas/units"
 	"github.com/gorilla/websocket"
 	"github.com/rinq/httpd/src/internal/statuspage"
 )
@@ -24,23 +25,26 @@ type Handler interface {
 // httpHandler is an http.Handler that negotiates a WebSocket upgrade and
 // dispatches handling to the appropriate sub-protocol.
 type httpHandler struct {
-	pingInterval time.Duration
-	logger       *log.Logger
-	handlers     map[string]Handler
-	upgrader     websocket.Upgrader
+	pingInterval       time.Duration
+	maxIncomingMsgSize units.MetricBytes
+	logger             *log.Logger
+	handlers           map[string]Handler
+	upgrader           websocket.Upgrader
 }
 
 // NewHTTPHandler returns an HTTP handler for a set of WebSocket handlers.
 func NewHTTPHandler(
 	originPattern string,
 	pingInterval time.Duration,
+	maxIncomingMsgSize units.MetricBytes,
 	logger *log.Logger,
 	handlers ...Handler,
 ) http.Handler {
 	h := &httpHandler{
-		pingInterval: pingInterval,
-		logger:       logger,
-		handlers:     map[string]Handler{},
+		maxIncomingMsgSize: maxIncomingMsgSize,
+		pingInterval:       pingInterval,
+		logger:             logger,
+		handlers:           map[string]Handler{},
 	}
 
 	h.upgrader = websocket.Upgrader{
@@ -85,6 +89,8 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("unsupported sub-protocol") // TODO: log, pull from headers
 		return
 	}
+
+	socket.SetReadLimit(int64(h.maxIncomingMsgSize))
 
 	conn := newConn(socket, h.pingInterval)
 
