@@ -36,19 +36,22 @@ func (m *maxCallTimeout) setTimeout(v *visitor) {
 // MaxConcurrentCalls sets the maximum number of calls that will be processed concurrently. Any calls that
 // are received while the Handler is at capacity will not be processed until there is spare capacity.
 // Time waiting for spare capacity counts as part of against the message timeout.
+// Passing the same option instance to two different handlers forces them to count each of the others'
+// max concurrent calls as their own.
 func MaxConcurrentCalls(max int) Option {
 	if max < 0 {
 		panic("expected the number of maximum concurrent calls to be 0 or greater")
 	}
 
-	return maxConcurrentCalls(max)
+	return &maxConcurrentCalls{semaphore.NewWeighted(int64(max))}
 }
 
-type maxConcurrentCalls int
+type maxConcurrentCalls struct {
+	cap *semaphore.Weighted
+}
 
-func (m maxConcurrentCalls) modify(h *Handler) {
-	cl := semaphore.NewWeighted(int64(m))
+func (m *maxConcurrentCalls) modify(h *Handler) {
 	h.visitorOpt = append(h.visitorOpt, func(v *visitor) {
-		v.syncCallCap = cl
+		v.syncCallCap = m.cap
 	})
 }

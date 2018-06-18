@@ -340,6 +340,12 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			close(end)
 		})
 
+		It("panics when a negative value is passed into the option handler", func() {
+			Expect(func() {
+				native.MaxCallTimeout(-1)
+			}).To(Panic())
+		})
+
 		It("limits a call to the server by the client timeout when the servers' timeout is longer", func() {
 
 			deadline := make(chan time.Time)
@@ -429,8 +435,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 	Context("when a maximum number of concurrent calls is specified", func() {
 
 		var (
-			subject *native.Handler
-			ns      string
+			ns string
 
 			end chan struct{}
 		)
@@ -452,7 +457,27 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			close(end)
 		})
 
-		It("accepts calls until the server has hit the capacity specified in the option. Once capacity is available, the call resumes", func() {
+		It("panics when a negative value is passed into the option handler", func() {
+			Expect(func() {
+				native.MaxConcurrentCalls(-1)
+			}).To(Panic())
+		})
+
+		setupWebSocket := func(handle *native.Handler, sessID uint16, writerBlock <-chan struct{}) *mockWebsock {
+			ws := &mockWebsock{
+				writerStart: writerBlock,
+				dead:        end,
+				serverResps: make(chan []byte),
+			}
+
+			go handle.Handle(ws, httptest.NewRequest("GET", "/", nil))
+
+			ws.clientCalls(createSession, sessID, nil, nil)
+
+			return ws
+		}
+
+		It("blocks calls when at capacity", func() {
 			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
 				defer req.Payload.Close()
 				res.Done(rinq.NewPayload(""))
@@ -460,9 +485,139 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 			// need to have sync'd traffic
 			const max = 10
-			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxConcurrentCalls(max))
+			subject := native.NewHandler(peer, message.JSONEncoding, native.MaxConcurrentCalls(max))
 
-			payload := "frogs"
+			messageHeaders := []interface{}{
+				seq, ns, cmd,
+				//setting the timeout to be ungodly long
+				5 * time.Hour / time.Millisecond,
+			}
+
+			// fill the capacity of the peer
+			blocker := setupWebSocket(subject, 0x1234, end)
+			for i := 0; i < max; i++ {
+				blocker.clientCalls(callSync, 0x1234, messageHeaders, "")
+			}
+
+			spy := setupWebSocket(subject, session, nil)
+			spy.clientCalls(callSync, session, messageHeaders, "")
+
+			select {
+			case <-spy.serverResps:
+				Fail("the call for our test session should still be blocking")
+			default:
+			}
+		})
+
+		It("allows calls when capacity is freed after waiting", func() {
+			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+				defer req.Payload.Close()
+				res.Done(rinq.NewPayload(""))
+				log.Println("response")
+			})
+
+			// need to have sync'd traffic
+			const max = 10
+			subject := native.NewHandler(peer, message.JSONEncoding, native.MaxConcurrentCalls(max))
+
+			block := make(chan struct{})
+
+			blocker := setupWebSocket(subject, 0x1234, block)
+			for i := 0; i < max; i++ {
+				blocker.clientCalls(callSync, 0x1234, []interface{}{
+					i, ns, cmd,
+					//setting the timeout to be ungodly long
+					5 * time.Hour / time.Millisecond,
+				}, "")
+			}
+
+			spy := setupWebSocket(subject, session, nil)
+			spy.clientCalls(callSync, session, []interface{}{
+				seq, ns, cmd,
+				//setting the timeout to be ungodly long
+				5 * time.Hour / time.Millisecond,
+			}, "")
+
+			close(block)
+
+			select {
+			case <-time.After(10 * time.Second):
+				Fail("the call for our test session shouldn't still be blocking")
+
+			case <-spy.serverResps:
+			}
+		})
+
+		It("shares capacity between handlers", func() {
+			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+				defer req.Payload.Close()
+				res.Done(rinq.NewPayload(""))
+			})
+
+			// need to have sync'd traffic
+			max := native.MaxConcurrentCalls(1)
+
+			block := make(chan struct{})
+
+			blocker := setupWebSocket(native.NewHandler(peer, message.JSONEncoding, max), 0x1234, block)
+			blocker.clientCalls(callSync, 0x1234, []interface{}{
+				0, ns, cmd,
+				//setting the timeout to be ungodly long
+				5 * time.Hour / time.Millisecond,
+			}, "")
+
+			spy := setupWebSocket(native.NewHandler(peer, message.JSONEncoding, max), session, nil)
+			spy.clientCalls(callSync, session, []interface{}{
+				seq, ns, cmd,
+				//setting the timeout to be ungodly long
+				5 * time.Hour / time.Millisecond,
+			}, "")
+
+			close(block)
+
+			select {
+			case <-time.After(10 * time.Second):
+				Fail("the call for our test session shouldn't still be blocking")
+
+			case <-spy.serverResps:
+			}
+		})
+
+		It("black holes messages when the message times out while blocked waiting for capacity", func() {
+			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+				defer req.Payload.Close()
+				res.Done(rinq.NewPayload(""))
+			})
+
+			// need to have sync'd traffic
+			const max = 0
+			subject := native.NewHandler(peer, message.JSONEncoding, native.MaxConcurrentCalls(max))
+
+			timeout := 50 * time.Millisecond
+
+			spy := setupWebSocket(subject, session, nil)
+			spy.clientCalls(callSync, session, []interface{}{
+				seq, ns, cmd, timeout / time.Millisecond,
+			}, "")
+
+			select {
+			case <-spy.serverResps:
+				Fail("the call for our test session should still be blocking")
+			case <-time.After(timeout * 5):
+				// it's timed out by now
+			}
+		})
+
+		It("shares capacity across websockets", func() {
+			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+				defer req.Payload.Close()
+				res.Done(rinq.NewPayload(""))
+			})
+
+			// need to have sync'd traffic
+			const max = 10
+			subject := native.NewHandler(peer, message.JSONEncoding, native.MaxConcurrentCalls(max))
+
 			messageHeaders := []interface{}{
 				seq, ns, cmd,
 				//setting the timeout to be ungodly long
@@ -495,24 +650,16 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			}
 
 			w.clientCalls(createSession, session, nil, nil)
-			w.clientCalls(callSync, session, messageHeaders, payload)
+			w.clientCalls(callSync, session, messageHeaders, "")
 			go subject.Handle(w, httptest.NewRequest("GET", "/", nil))
 
 			select {
 			case <-w.serverResps:
-				Fail("the current call for our test session should still be blocking")
+				Fail("the call for our test session should still be blocking")
 			default:
 			}
-
-			close(block)
-
-			select {
-			case <-time.After(3 * time.Minute):
-				Fail("the current call for our test session shouldn't still be blocking")
-
-			case <-w.serverResps:
-			}
 		})
+
 	})
 })
 
