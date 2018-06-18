@@ -33,6 +33,7 @@ var _ = Describe("httpHandler", func() {
 		subject = NewHTTPHandler(
 			"*",
 			time.Second,
+			10,
 			logger,
 			handlerA,
 			handlerB,

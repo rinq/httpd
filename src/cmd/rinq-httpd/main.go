@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/alecthomas/units"
 	"github.com/gorilla/websocket"
 	"github.com/rinq/httpd/src/internal/statuspage"
 	"github.com/rinq/httpd/src/websock"
@@ -89,6 +90,7 @@ func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {
 	return websock.NewHTTPHandler(
 		os.Getenv("RINQ_HTTPD_ORIGIN"),
 		pingInterval(),
+		maxMsgSize(),
 		logger,
 		&native.Handler{Peer: peer, Encoding: message.CBOREncoding, Logger: logger},
 		&native.Handler{Peer: peer, Encoding: message.JSONEncoding, Logger: logger},
@@ -102,4 +104,13 @@ func pingInterval() time.Duration {
 	}
 
 	return time.Duration(i) * time.Second
+}
+
+func maxMsgSize() units.MetricBytes {
+	i, err := strconv.ParseUint(os.Getenv("RINQ_HTTPD_MAX_MSG_SIZE"), 10, 64)
+	if err != nil {
+		return units.Megabyte
+	}
+
+	return units.MetricBytes(i)
 }
