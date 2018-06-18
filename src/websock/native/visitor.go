@@ -8,6 +8,7 @@ import (
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 	"github.com/rinq/rinq-go/src/rinq/ident"
+	"golang.org/x/sync/semaphore"
 	"time"
 )
 
@@ -22,6 +23,7 @@ type visitor struct {
 	reverse map[ident.SessionID]message.SessionIndex
 
 	syncCallTimeout time.Duration
+	syncCallCap     *semaphore.Weighted
 }
 
 func newVisitor(
@@ -180,6 +182,16 @@ func (v *visitor) call(sess rinq.Session, m *message.SyncCall) {
 	timeout := v.capSyncCallTimeout(m.Timeout)
 	ctx, cancel := context.WithTimeout(v.context, timeout)
 	defer cancel()
+
+	if v.syncCallCap != nil {
+		err := v.syncCallCap.Acquire(ctx, 1)
+
+		if err != nil {
+			return
+		}
+
+		defer v.syncCallCap.Release(1)
+	}
 
 	p, err := sess.Call(ctx, m.Namespace, m.Command, m.Payload)
 

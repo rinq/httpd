@@ -1,5 +1,5 @@
-hash: 4d8ce3c9b5cb138afaf9f3ff32fd3312d247edef6720f343480df69a862a73f5
-updated: 2018-06-18T12:44:32.512781+10:00
+hash: a18ea8174faaa0626a78a6f11214f3cf795e6ec800b7827a15a8cd29e57de9e6
+updated: 2018-06-18T14:00:38.089487+10:00
 imports:
 - name: github.com/alecthomas/units
   version: 2efee857e7cfd4f3d0138cc3cbb1b4966962b93a
@@ -98,6 +98,10 @@ imports:
   - internal/timeseries
   - lex/httplex
   - trace
+- name: golang.org/x/sync
+  version: 1d60e4601c6fd243af51cc01ddf169918a5407ca
+  subpackages:
+  - semaphore
 testImports:
 - name: golang.org/x/sys
   version: 2320a9c15898af1b1b24f99700d5c1e957f9d8cf

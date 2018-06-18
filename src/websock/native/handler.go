@@ -20,11 +20,16 @@ var _ websock.Handler = (*Handler)(nil)
 // sub-protocol that the handler advertises itself as supporting.
 func NewHandler(peer rinq.Peer, encoding message.Encoding, options ...Option) *Handler {
 
-	return &Handler{
-		Peer:       peer,
-		Encoding:   encoding,
-		visitorOpt: options,
+	h := &Handler{
+		Peer:     peer,
+		Encoding: encoding,
 	}
+
+	for _, opt := range options {
+		opt.modify(h)
+	}
+
+	return h
 }
 
 // Handler is an implementation of websock.Handler that handles connections that
@@ -34,7 +39,7 @@ type Handler struct {
 	Encoding message.Encoding
 	Logger   *log.Logger
 
-	visitorOpt []Option
+	visitorOpt []func(*visitor)
 }
 
 // Protocol returns the name of the WebSocket sub-protocol supported by this
@@ -61,7 +66,7 @@ func (h *Handler) Handle(c websock.Connection, r *http.Request) error {
 	)
 
 	for _, opt := range h.visitorOpt {
-		opt.modify(v)
+		opt(v)
 	}
 
 	for {

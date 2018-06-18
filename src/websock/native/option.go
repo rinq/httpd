@@ -1,17 +1,23 @@
 package native
 
-import "time"
+import (
+	"golang.org/x/sync/semaphore"
+	"time"
+)
 
 // Option modifies how a given Handler handles messages from Rinq connections that the Handler manages.
 // Options are typically applied to the Handler by passing them to NewHandler().
 type Option interface {
-	modify(*visitor)
+	modify(*Handler)
 }
 
 // MaxCallTimeout sets the maximum time a call can be. The given time will
 // override any timeout set by the client where the clients' timeout is
 // longer.
 func MaxCallTimeout(max time.Duration) Option {
+	if max < 0 {
+		panic("expected the maximum call timeout to be 0 or greater")
+	}
 	return &maxCallTimeout{max}
 }
 
@@ -19,6 +25,33 @@ type maxCallTimeout struct {
 	max time.Duration
 }
 
-func (m *maxCallTimeout) modify(v *visitor) {
+func (m *maxCallTimeout) modify(h *Handler) {
+	h.visitorOpt = append(h.visitorOpt, m.setTimeout)
+}
+
+func (m *maxCallTimeout) setTimeout(v *visitor) {
 	v.syncCallTimeout = m.max
+}
+
+// MaxConcurrentCalls sets the maximum number of calls that will be processed concurrently. Any calls that
+// are received while the Handler is at capacity will not be processed until there is spare capacity.
+// Time waiting for spare capacity counts as part of against the message timeout.
+// Passing the same option instance to two different handlers forces them to count each of the others'
+// max concurrent calls as their own.
+func MaxConcurrentCalls(max int) Option {
+	if max < 0 {
+		panic("expected the number of maximum concurrent calls to be 0 or greater")
+	}
+
+	return &maxConcurrentCalls{semaphore.NewWeighted(int64(max))}
+}
+
+type maxConcurrentCalls struct {
+	cap *semaphore.Weighted
+}
+
+func (m *maxConcurrentCalls) modify(h *Handler) {
+	h.visitorOpt = append(h.visitorOpt, func(v *visitor) {
+		v.syncCallCap = m.cap
+	})
 }

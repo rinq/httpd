@@ -17,4 +17,5 @@ import:
 - package: github.com/alecthomas/units
 - package: github.com/satori/go.uuid
   version: v1.2.0
+- package: golang.org/x/sync/semaphore
 
