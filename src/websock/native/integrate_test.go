@@ -18,6 +18,7 @@ import (
 	"io"
 	"log"
 	"net/http/httptest"
+	"sync"
 	"time"
 )
 
@@ -300,7 +301,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 			websocket *mockWebsock
 
-			start chan struct{}
+			start func()
 			end   chan struct{}
 		)
 
@@ -315,12 +316,13 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			ns = nsBase + uuid.NewV4().String()
 			log.Println("listening on", ns)
 
-			start = make(chan struct{})
+			s := make(chan struct{})
+			start = func() { close(s) }
 			end = make(chan struct{})
 
 			websocket = &mockWebsock{
-				readerStart: start,
-				writerStart: start,
+				readerStart: s,
+				writerStart: s,
 				dead:        end,
 				serverResps: make(chan []byte),
 			}
@@ -328,7 +330,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			go func() {
 				defer GinkgoRecover()
 
-				<-start
+				<-s
 
 				err := subject.Handle(websocket, httptest.NewRequest("GET", "/", nil))
 				log.Println("got", err.Error(), ", handler closed")
@@ -370,7 +372,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 			expectedTime := time.Now().Add(clientTimeout * time.Millisecond)
 
-			close(start)
+			start()
 
 			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second/2))
 		})
@@ -398,7 +400,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 			expectedTime := time.Now().Add(serverTimeout)
 
-			close(start)
+			start()
 
 			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second/2))
 		})
@@ -425,7 +427,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 			expectedTime := time.Now().Add(clientTimeout * time.Millisecond)
 
-			close(start)
+			start()
 
 			Expect(<-deadline).To(BeTemporally("~", expectedTime, time.Second/2))
 		})
@@ -699,11 +701,15 @@ type mockWebsock struct {
 
 	dead <-chan struct{}
 
+	mutex       sync.Mutex
 	clientReqs  []io.Reader
 	serverResps chan []byte
 }
 
 func (m *mockWebsock) clientCalls(msgType uint16, session uint16, headers interface{}, payload interface{}) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	out := constructClientReq(msgType, session, headers, payload)
 	m.clientReqs = append(m.clientReqs, bytes.NewBuffer(out))
 }
@@ -713,12 +719,16 @@ func (m *mockWebsock) NextReader() (out io.Reader, err error) {
 		<-m.readerStart
 	}
 
+	m.mutex.Lock()
 	if len(m.clientReqs) == 0 {
+		m.mutex.Unlock()
 		<-m.dead
 		return nil, context.Canceled
 	}
 
 	out, m.clientReqs = m.clientReqs[0], m.clientReqs[1:]
+
+	m.mutex.Unlock()
 	return out, nil
 }
 
