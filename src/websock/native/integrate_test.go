@@ -71,7 +71,8 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			kill = make(chan struct{})
 
 			websocket = &mockWebsock{
-				start:       start,
+				readerStart: start,
+				writerStart: start,
 				dead:        kill,
 				serverResps: make(chan []byte),
 			}
@@ -318,7 +319,8 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			end = make(chan struct{})
 
 			websocket = &mockWebsock{
-				start:       start,
+				readerStart: start,
+				writerStart: start,
 				dead:        end,
 				serverResps: make(chan []byte),
 			}
@@ -423,6 +425,95 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 		})
 
 	})
+
+	Context("when a maximum number of concurrent calls is specified", func() {
+
+		var (
+			subject *native.Handler
+			ns      string
+
+			end chan struct{}
+		)
+
+		const (
+			nsBase      = "name-space"
+			cmd         = "cmd"
+			seq    uint = 1
+		)
+
+		BeforeEach(func() {
+			ns = nsBase + uuid.NewV4().String()
+			log.Println("listening on", ns)
+
+			end = make(chan struct{})
+		})
+
+		AfterEach(func() {
+			close(end)
+		})
+
+		It("accepts calls until the server has hit the capacity specified in the option. Once capacity is available, the call resumes", func() {
+			peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+				defer req.Payload.Close()
+				res.Done(rinq.NewPayload(""))
+			})
+
+			// need to have sync'd traffic
+			const max = 10
+			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxConcurrentCalls(max))
+
+			payload := "frogs"
+			messageHeaders := []interface{}{
+				seq, ns, cmd,
+				//setting the timeout to be ungodly long
+				5 * time.Hour / time.Millisecond,
+			}
+
+			block := make(chan struct{})
+
+			// fill the capacity of the peer
+			for i := 0; i < max; i++ {
+				w := &mockWebsock{
+					writerStart: block,
+					dead:        end,
+					serverResps: make(chan []byte),
+				}
+
+				w.clientCalls(createSession, uint16(i), nil, nil)
+				w.clientCalls(callSync, uint16(i), messageHeaders, "")
+				go func() {
+					defer GinkgoRecover()
+
+					subject.Handle(w, httptest.NewRequest("GET", "/", nil))
+				}()
+			}
+
+			// start up our websocket that we want to block
+			w := &mockWebsock{
+				dead:        end,
+				serverResps: make(chan []byte),
+			}
+
+			w.clientCalls(createSession, session, nil, nil)
+			w.clientCalls(callSync, session, messageHeaders, payload)
+			go subject.Handle(w, httptest.NewRequest("GET", "/", nil))
+
+			select {
+			case <-w.serverResps:
+				Fail("the current call for our test session should still be blocking")
+			default:
+			}
+
+			close(block)
+
+			select {
+			case <-time.After(3 * time.Minute):
+				Fail("the current call for our test session shouldn't still be blocking")
+
+			case <-w.serverResps:
+			}
+		})
+	})
 })
 
 func serializeServerResp(outgoing message.Outgoing) []byte {
@@ -457,8 +548,9 @@ func constructClientReq(msgType uint16, session uint16, headers interface{}, pay
 }
 
 type mockWebsock struct {
-	start <-chan struct{}
-	dead  <-chan struct{}
+	readerStart, writerStart <-chan struct{}
+
+	dead <-chan struct{}
 
 	clientReqs  []io.Reader
 	serverResps chan []byte
@@ -470,7 +562,9 @@ func (m *mockWebsock) clientCalls(msgType uint16, session uint16, headers interf
 }
 
 func (m *mockWebsock) NextReader() (out io.Reader, err error) {
-	<-m.start
+	if m.readerStart != nil {
+		<-m.readerStart
+	}
 
 	if len(m.clientReqs) == 0 {
 		<-m.dead
@@ -491,7 +585,9 @@ func (m *mockWebsock) serverResponse() []byte {
 }
 
 func (m *mockWebsock) NextWriter() (out io.WriteCloser, err error) {
-	<-m.start
+	if m.writerStart != nil {
+		<-m.writerStart
+	}
 
 	b := wcByteBuff{Buffer: new(bytes.Buffer)}
 
