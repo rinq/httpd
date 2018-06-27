@@ -10,7 +10,10 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type CapacityPolicy interface {
+// Capacity represents the resources of the given server - in this case,
+// maximum amount of stateful calls permissible at once per connection
+// and per server
+type Capacity interface {
 	// ReserveCapacity either reserves capacity on the server or returns an error
 	ReserveCapacity(context.Context) error
 	// ReleaseCapacity releases capacity to the server
@@ -22,7 +25,7 @@ type Connection interface {
 	NextReader() (io.Reader, error)
 	NextWriter() (io.WriteCloser, error)
 
-	CapacityPolicy
+	Capacity
 }
 
 type connection struct {

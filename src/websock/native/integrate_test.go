@@ -464,8 +464,14 @@ type mockWebsock struct {
 
 	clientReqs  []io.Reader
 	serverResps chan []byte
+}
 
-	websock.CapacityPolicy
+func (m *mockWebsock) ReserveCapacity(ctx context.Context) error {
+	return nil
+}
+
+func (m *mockWebsock) ReleaseCapacity() {
+
 }
 
 func (m *mockWebsock) clientCalls(msgType uint16, session uint16, headers interface{}, payload interface{}) {

@@ -24,7 +24,7 @@ type visitor struct {
 
 	syncCallTimeout time.Duration
 
-	policy websock.CapacityPolicy
+	policy websock.Capacity
 }
 
 func newVisitor(
@@ -32,7 +32,7 @@ func newVisitor(
 	peer rinq.Peer,
 	attrs []rinq.Attr,
 	send func(message.Outgoing),
-	policy websock.CapacityPolicy,
+	policy websock.Capacity,
 ) *visitor {
 	return &visitor{
 		context: context,

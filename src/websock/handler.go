@@ -22,6 +22,7 @@ type Handler interface {
 	Handle(Connection, *http.Request) error
 }
 
+// Logger defines what the HTTPHandler expects to be able to log to
 type Logger interface {
 	Log(fmt string, args ...interface{})
 	Debug(fmt string, v ...interface{})
