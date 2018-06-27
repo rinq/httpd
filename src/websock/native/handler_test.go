@@ -3,17 +3,18 @@ package native_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/rinq/httpd/src/websock/native"
+	"github.com/rinq/httpd/src/websock"
+	"github.com/rinq/httpd/src/websock/native"
 	"github.com/rinq/httpd/src/websock/native/message"
 )
 
 var _ = Describe("handler", func() {
 	var (
-		subject *Handler
+		subject websock.Handler
 	)
 
 	BeforeEach(func() {
-		subject = &Handler{
+		subject = &native.Handler{
 			Encoding: message.JSONEncoding,
 		}
 	})

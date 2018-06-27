@@ -2,7 +2,6 @@ package websock_test
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +18,6 @@ var _ = Describe("httpHandler", func() {
 	var (
 		handlerA, handlerB *mock.Handler
 		subject            http.Handler
-		logger             *log.Logger
 		server             *httptest.Server
 	)
 
@@ -30,14 +28,10 @@ var _ = Describe("httpHandler", func() {
 		handlerB = &mock.Handler{}
 		handlerB.Impl.Protocol = "proto-b"
 
-		subject = NewHTTPHandler(
-			"*",
-			time.Second,
-			10,
-			logger,
+		subject = NewHTTPHandler([]Handler{
 			handlerA,
 			handlerB,
-		)
+		})
 
 		server = httptest.NewServer(subject)
 	})

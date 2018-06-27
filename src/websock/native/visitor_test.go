@@ -24,7 +24,7 @@ var _ = Describe("visitor", func() {
 			sent = append(sent, m)
 		}
 
-		subject = newVisitor(context.Background(), nil, nil, send)
+		subject = newVisitor(context.Background(), nil, nil, send, &mockPolicy{})
 	})
 
 	Describe("VisitSessionCreate", func() {
@@ -107,3 +107,14 @@ var _ = Describe("visitor", func() {
 		})
 	})
 })
+
+type mockPolicy struct {
+}
+
+func (m *mockPolicy) ReserveCapacity(context.Context) error {
+	return nil
+}
+
+func (m *mockPolicy) ReleaseCapacity() {
+
+}

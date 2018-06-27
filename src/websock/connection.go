@@ -5,13 +5,24 @@ import (
 	"sync"
 	"time"
 
+	"context"
 	"github.com/gorilla/websocket"
+	"golang.org/x/sync/semaphore"
 )
+
+type CapacityPolicy interface {
+	// ReserveCapacity either reserves capacity on the server or returns an error
+	ReserveCapacity(context.Context) error
+	// ReleaseCapacity releases capacity to the server
+	ReleaseCapacity()
+}
 
 // Connection is an interface for performing IO on a WebSocket connection.
 type Connection interface {
 	NextReader() (io.Reader, error)
 	NextWriter() (io.WriteCloser, error)
+
+	CapacityPolicy
 }
 
 type connection struct {
@@ -19,15 +30,24 @@ type connection struct {
 	pingInterval time.Duration
 	closeReply   func(int, string) error
 
+	globalCap *semaphore.Weighted
+	localCap  *semaphore.Weighted
+
 	mutex sync.Mutex // write mutex
 	done  chan struct{}
 }
 
-func newConn(socket *websocket.Conn, pingInterval time.Duration) *connection {
+func newConn(
+	socket *websocket.Conn,
+	pingInterval time.Duration,
+	global, local *semaphore.Weighted) *connection {
 	c := &connection{
 		socket:       socket,
 		pingInterval: pingInterval,
-		done:         make(chan struct{}),
+		globalCap:    global,
+		localCap:     local,
+
+		done: make(chan struct{}),
 	}
 
 	socket.SetPongHandler(c.pong)
@@ -35,6 +55,25 @@ func newConn(socket *websocket.Conn, pingInterval time.Duration) *connection {
 	go c.pingLoop()
 
 	return c
+}
+
+func (c *connection) ReserveCapacity(ctx context.Context) error {
+	if err := c.globalCap.Acquire(ctx, 1); err != nil {
+		return err
+	}
+
+	if err := c.localCap.Acquire(ctx, 1); err != nil {
+		// release the resources for the global cap
+		c.globalCap.Release(1)
+		return err
+	}
+
+	return nil
+}
+
+func (c *connection) ReleaseCapacity() {
+	c.globalCap.Release(1)
+	c.localCap.Release(1)
 }
 
 func (c *connection) NextReader() (io.Reader, error) {

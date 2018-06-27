@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/alecthomas/units"
 	"github.com/gorilla/websocket"
+	"github.com/jmalloc/twelf/src/twelf"
 	"github.com/rinq/httpd/src/internal/statuspage"
 	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native"
@@ -22,7 +22,6 @@ import (
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	logger := log.New(os.Stdout, "", log.LstdFlags)
 	var ws http.Handler
 
 	server := &http.Server{
@@ -38,7 +37,7 @@ func main() {
 
 	for {
 		peer := connect()
-		ws = websocketHandler(peer, logger)
+		ws = websocketHandler(peer, twelf.DebugLogger)
 
 		done := make(chan error, 1)
 		go serve(server, done)
@@ -86,14 +85,16 @@ func serve(server *http.Server, c chan<- error) {
 	close(c)
 }
 
-func websocketHandler(peer rinq.Peer, logger *log.Logger) http.Handler {
+func websocketHandler(peer rinq.Peer, logger twelf.Logger) http.Handler {
 	return websock.NewHTTPHandler(
-		os.Getenv("RINQ_HTTPD_ORIGIN"),
-		pingInterval(),
-		maxMsgSize(),
-		logger,
-		&native.Handler{Peer: peer, Encoding: message.CBOREncoding, Logger: logger},
-		&native.Handler{Peer: peer, Encoding: message.JSONEncoding, Logger: logger},
+		[]websock.Handler{
+			native.NewHandler(peer, message.CBOREncoding, logger),
+			native.NewHandler(peer, message.JSONEncoding, logger),
+		},
+
+		websock.LimitToOrigin(os.Getenv("RINQ_HTTPD_ORIGIN")),
+		websock.PingInterval(pingInterval()),
+		websock.MaxMessageSize(maxMsgSize()),
 	)
 }
 

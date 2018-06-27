@@ -7,8 +7,10 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/jmalloc/twelf/src/twelf"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
@@ -80,7 +82,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 				defer GinkgoRecover()
 
 				<-start
-				handler := native.NewHandler(peer, message.JSONEncoding)
+				handler := native.NewHandler(peer, message.JSONEncoding, twelf.DefaultLogger)
 				err := handler.Handle(websocket, httptest.NewRequest("GET", "/", nil))
 				log.Println("got", err.Error(), ", handler closed")
 			}()
@@ -294,7 +296,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 	Context("when a timeout is set on the websocket", func() {
 
 		var (
-			subject *native.Handler
+			subject websock.Handler
 			ns      string
 
 			websocket *mockWebsock
@@ -353,7 +355,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			clientTimeout := time.Duration(2000)
 			serverTimeout := 10 * time.Second
 
-			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
+			subject = native.NewHandler(peer, message.JSONEncoding, twelf.DebugLogger, native.MaxCallTimeout(serverTimeout))
 
 			websocket.clientCalls(createSession, session, nil, nil)
 			websocket.clientCalls(callSync, session, []interface{}{
@@ -381,7 +383,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			clientTimeout := time.Duration(10000)
 			serverTimeout := time.Duration(2000) * time.Millisecond
 
-			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
+			subject = native.NewHandler(peer, message.JSONEncoding, twelf.DebugLogger, native.MaxCallTimeout(serverTimeout))
 
 			websocket.clientCalls(createSession, session, nil, nil)
 			websocket.clientCalls(callSync, session, []interface{}{
@@ -408,7 +410,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			// client timeouts are in milliseconds
 			clientTimeout := time.Duration(10000)
 
-			subject = native.NewHandler(peer, message.JSONEncoding)
+			subject = native.NewHandler(peer, message.JSONEncoding, twelf.DebugLogger)
 
 			websocket.clientCalls(createSession, session, nil, nil)
 			websocket.clientCalls(callSync, session, []interface{}{
@@ -462,6 +464,8 @@ type mockWebsock struct {
 
 	clientReqs  []io.Reader
 	serverResps chan []byte
+
+	websock.CapacityPolicy
 }
 
 func (m *mockWebsock) clientCalls(msgType uint16, session uint16, headers interface{}, payload interface{}) {
