@@ -7,17 +7,17 @@ import (
 	"strings"
 	"time"
 
+	"context"
 	"github.com/gorilla/websocket"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/internal/mock"
-	"context"
 )
 
 var _ = Describe("httpHandler", func() {
 
-	Context("when no configuration options have been set", func(){
+	Context("when no configuration options have been set", func() {
 		var (
 			subject            http.Handler
 			server             *httptest.Server
@@ -100,7 +100,7 @@ var _ = Describe("httpHandler", func() {
 	})
 
 	Context("when origin limits have been set", func() {
-		var server  *httptest.Server
+		var server *httptest.Server
 
 		BeforeEach(func() {
 			server, _ = startHTTPHander(LimitToOrigin("*.cats.com:80"))
@@ -131,7 +131,7 @@ var _ = Describe("httpHandler", func() {
 
 	Context("when ping intervals have been set", func() {
 
- 		It("sends a ping request at perodically according to the interval", func() {
+		It("sends a ping request at perodically according to the interval", func() {
 
 			timeUntilRequest := 115 * time.Millisecond
 			pingTimeout := 20 * time.Millisecond
@@ -161,10 +161,10 @@ var _ = Describe("httpHandler", func() {
 			// try and read a msg
 			go rawConn.NextReader()
 
-			// ensure we recieve at least 115 / 20 times
-			repeat := int(timeUntilRequest/pingTimeout)
+			// ensure we receive at least 115 / 20 times
+			repeat := int(timeUntilRequest / pingTimeout)
 			for i := 0; i < repeat; i++ {
-				Eventually(pingNotify).Should(Receive(), "failed to recieve ping %v of %v", i, repeat)
+				Eventually(pingNotify).Should(Receive(), "failed to receive ping %v of %v", i, repeat)
 			}
 		})
 
@@ -249,7 +249,7 @@ var _ = Describe("httpHandler", func() {
 					}()
 				}
 
-				connNotify<-true
+				connNotify <- true
 
 				return nil
 			}
@@ -284,7 +284,7 @@ func startHTTPHander(option ...Option) (*httptest.Server, *mock.Handler) {
 	return server, handle
 }
 
-func wsClientFor(server *httptest.Server, protocols ...string ) *websocket.Conn {
+func wsClientFor(server *httptest.Server, protocols ...string) *websocket.Conn {
 	url := strings.Replace(server.URL, "http://", "ws://", 1)
 	d := websocket.Dialer{Subprotocols: protocols}
 	con, _, err := d.Dial(url, nil)
