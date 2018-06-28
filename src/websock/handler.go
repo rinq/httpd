@@ -34,7 +34,7 @@ type httpHandler struct {
 	pingInterval       time.Duration
 	maxIncomingMsgSize units.MetricBytes
 	logger             Logger
-	defaultHandler Handler
+	defaultHandler     Handler
 	handlers           map[string]Handler
 	upgrader           websocket.Upgrader
 
@@ -107,7 +107,6 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.logger.Log("handler error:", err) // TODO: log
 	}
 }
-
 
 func closeGracefully(socket *websocket.Conn, h *httpHandler) {
 	// Write a close message for those clients that don't automatically
