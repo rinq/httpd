@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/jmalloc/twelf/src/twelf"
 	. "github.com/onsi/ginkgo"
@@ -291,6 +292,33 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 				}
 			})
 		})
+
+		Context("and the server is nearing capacity", func() {
+			BeforeEach(func() {
+				peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+					defer req.Payload.Close()
+					res.Done(rinq.NewPayload(respBody))
+				})
+			})
+
+			It("blackholes any calls that fail to reserve capacity", func() {
+				// fail to acquire capacity in some way
+				websocket.capacityReservationResp = errors.New("boom")
+
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callSync, session, []interface{}{
+					seq, ns, cmd, time.Second,
+				}, "ping")
+
+				close(start)
+
+				select {
+				case <-websocket.serverResps:
+					Fail("Received a response to a request that should time out")
+				case <-time.After(time.Second / 4):
+				}
+			})
+		})
 	})
 
 	Context("when a timeout is set on the websocket", func() {
@@ -464,10 +492,12 @@ type mockWebsock struct {
 
 	clientReqs  []io.Reader
 	serverResps chan []byte
+
+	capacityReservationResp error
 }
 
 func (m *mockWebsock) ReserveCapacity(ctx context.Context) error {
-	return nil
+	return m.capacityReservationResp
 }
 
 func (m *mockWebsock) ReleaseCapacity() {
