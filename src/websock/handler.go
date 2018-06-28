@@ -34,6 +34,7 @@ type httpHandler struct {
 	pingInterval       time.Duration
 	maxIncomingMsgSize units.MetricBytes
 	logger             Logger
+	defaultHandler Handler
 	handlers           map[string]Handler
 	upgrader           websocket.Upgrader
 
@@ -88,17 +89,11 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	wsh, ok := h.handlers[socket.Subprotocol()]
 	if !ok {
-		// Write a close message for those clients that don't automatically
-		// disconnect after a failed sub-protocol negotiation.
-		_ = socket.WriteControl(
-			websocket.CloseMessage,
-			websocket.FormatCloseMessage(
-				websocket.CloseProtocolError,
-				"unsupported sub-protocol",
-			),
-			time.Now().Add(time.Second),
-		)
-		h.logger.Log("unsupported sub-protocol") // TODO: log, pull from headers
+		wsh = h.defaultHandler
+	}
+
+	if wsh == nil {
+		closeGracefully(socket, h)
 		return
 	}
 
@@ -110,6 +105,20 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	err = wsh.Handle(conn, r)
 	if err != nil {
 		h.logger.Log("handler error:", err) // TODO: log
-		return
 	}
+}
+
+
+func closeGracefully(socket *websocket.Conn, h *httpHandler) {
+	// Write a close message for those clients that don't automatically
+	// disconnect after a failed sub-protocol negotiation.
+	_ = socket.WriteControl(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(
+			websocket.CloseProtocolError,
+			"unsupported sub-protocol",
+		),
+		time.Now().Add(time.Second),
+	)
+	h.logger.Log("unsupported sub-protocol") // TODO: log, pull from headers
 }

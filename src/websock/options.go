@@ -50,3 +50,12 @@ func MaxConcurrentCalls(perConn, globally int) Option {
 		h.maxCallsPerConn = int64(perConn)
 	}
 }
+
+// DefaultHandler configures the HTTPHandler to use the given
+// handle when no matching sub protocol can be found. If no
+// default handle is given, it will return
+func DefaultHandler(handle Handler) Option {
+	return func(h *httpHandler) {
+		h.defaultHandler = handle
+	}
+}

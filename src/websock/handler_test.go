@@ -269,6 +269,64 @@ var _ = Describe("httpHandler", func() {
 		})
 
 	})
+
+	Context("when the default handler has been set", func() {
+		It("delegates all unknown messages to the default handle", func() {
+
+			server, handle := startHTTPHander(DefaultHandler(&mock.Handler{}))
+			defer server.Close()
+
+			reqNotify := make(chan struct{})
+
+			handle.Impl.Handle = func(_ Connection, _ *http.Request) error {
+				close(reqNotify)
+				return nil
+			}
+
+			rawConn := wsClientFor(server, handle.Protocol())
+			defer rawConn.Close()
+
+			Expect(reqNotify).To(BeClosed())
+		})
+
+		It("delegates all unknown sub-protocols to the default handle", func() {
+
+			defaultHandle := &mock.Handler{}
+			reqNotify := make(chan struct{})
+
+			defaultHandle.Impl.Handle = func(_ Connection, _ *http.Request) error {
+				close(reqNotify)
+				return nil
+			}
+
+			server, _ := startHTTPHander(DefaultHandler(defaultHandle))
+			defer server.Close()
+
+			rawConn := wsClientFor(server, "no-matching-proto")
+			defer rawConn.Close()
+
+			Expect(reqNotify).To(BeClosed())
+		})
+
+		It("delegates all connections with no sub-protocol to the default handle", func() {
+
+			defaultHandle := &mock.Handler{}
+			reqNotify := make(chan struct{})
+
+			defaultHandle.Impl.Handle = func(_ Connection, _ *http.Request) error {
+				close(reqNotify)
+				return nil
+			}
+
+			server, _ := startHTTPHander(DefaultHandler(defaultHandle))
+			defer server.Close()
+
+			rawConn := wsClientFor(server)
+			defer rawConn.Close()
+
+			Expect(reqNotify).To(BeClosed())
+		})
+	})
 })
 
 func startHTTPHander(option ...Option) (*httptest.Server, *mock.Handler) {
