@@ -268,6 +268,73 @@ var _ = Describe("httpHandler", func() {
 			close(cleanupNotify)
 		})
 
+		It("doesn't reserve global capacity when there's no local capacity available", func() {
+			connNotify := make(chan bool, 10)
+
+			greedyHandle := &mock.Handler{}
+			greedyHandle.Impl.Protocol = "greedy-protocol"
+
+			ctx, cancelGreedy := context.WithCancel(context.Background())
+
+			greedyHandle.Impl.Handle = func(cn Connection, req *http.Request) error {
+				firstDone := make(chan struct{})
+				// queue two requests - a "long" running request and one that will block waiting and then cancel
+				go func() {
+					// didn't return capacity to the main thread - effectively long running
+					cn.ReserveCapacity(ctx)
+					close(firstDone)
+				}()
+
+				go func() {
+					defer GinkgoRecover()
+
+					<-firstDone
+					// we're going to kill this request after we have the next one queued up
+					err := cn.ReserveCapacity(ctx)
+					Expect(err).To(HaveOccurred())
+				}()
+
+				connNotify <- true
+
+				return nil
+			}
+
+			starvedHandle := &mock.Handler{}
+			starvedHandle.Impl.Protocol = "starved-protocol"
+
+			gotCapacityNotify := make(chan struct{})
+
+			starvedHandle.Impl.Handle = func(cn Connection, req *http.Request) error {
+
+				go func() {
+					cn.ReserveCapacity(context.Background())
+					close(gotCapacityNotify)
+				}()
+				connNotify <- true
+
+				return nil
+			}
+
+			subject := NewHTTPHandler([]Handler{
+				greedyHandle, starvedHandle,
+			}, MaxConcurrentCalls(1, 2))
+
+			server := httptest.NewServer(subject)
+			defer server.Close()
+
+			// accept the conn for greedy
+			defer wsClientFor(server, greedyHandle.Protocol()).Close()
+			<-connNotify
+
+			// accept the conn for starved
+			defer wsClientFor(server, starvedHandle.Protocol()).Close()
+			<-connNotify
+
+			cancelGreedy()
+
+			// wait until the starved connection gets a turn
+			Eventually(gotCapacityNotify).Should(BeClosed())
+		})
 	})
 
 	Context("when the default handler has been set", func() {
