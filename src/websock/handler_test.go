@@ -286,7 +286,7 @@ var _ = Describe("httpHandler", func() {
 			rawConn := wsClientFor(server, handle.Protocol())
 			defer rawConn.Close()
 
-			Expect(reqNotify).To(BeClosed())
+			Eventually(reqNotify).Should(BeClosed())
 		})
 
 		It("delegates all unknown sub-protocols to the default handle", func() {
@@ -305,7 +305,7 @@ var _ = Describe("httpHandler", func() {
 			rawConn := wsClientFor(server, "no-matching-proto")
 			defer rawConn.Close()
 
-			Expect(reqNotify).To(BeClosed())
+			Eventually(reqNotify).Should(BeClosed())
 		})
 
 		It("delegates all connections with no sub-protocol to the default handle", func() {
@@ -324,7 +324,7 @@ var _ = Describe("httpHandler", func() {
 			rawConn := wsClientFor(server)
 			defer rawConn.Close()
 
-			Expect(reqNotify).To(BeClosed())
+			Eventually(reqNotify).Should(BeClosed())
 		})
 	})
 })
