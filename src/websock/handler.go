@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/jmalloc/twelf/src/twelf"
 	"github.com/rinq/httpd/src/internal/statuspage"
+	"github.com/rinq/rinq-go/src/rinq"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -19,7 +20,9 @@ type Handler interface {
 	Protocol() string
 
 	// Handle takes control of a WebSocket connection until it is closed.
-	Handle(Connection, *http.Request) error
+	// It takes a map of namespace to rinq.Attr to apply to any sessions
+	// created on this connection
+	Handle(Connection, *http.Request, map[string][]rinq.Attr) error
 }
 
 // Logger defines what the HTTPHandler expects to be able to log to
@@ -102,7 +105,7 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	connLimit := semaphore.NewWeighted(h.maxCallsPerConn)
 	conn := newConn(socket, h.pingInterval, h.globalLimit, connLimit)
 
-	err = wsh.Handle(conn, r)
+	err = wsh.Handle(conn, r, make(map[string][]rinq.Attr))
 	if err != nil {
 		h.logger.Log("handler error:", err) // TODO: log
 	}

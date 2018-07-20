@@ -4,13 +4,14 @@ import (
 	"net/http"
 
 	"github.com/rinq/httpd/src/websock"
+	"github.com/rinq/rinq-go/src/rinq"
 )
 
 // Handler is a mock websock.Handler
 type Handler struct {
 	Impl struct {
 		Protocol string
-		Handle   func(websock.Connection, *http.Request) error
+		Handle   func(websock.Connection, *http.Request, map[string][]rinq.Attr) error
 	}
 }
 
@@ -20,9 +21,9 @@ func (h *Handler) Protocol() string {
 }
 
 // Handle forwards to h.Impl.Handle
-func (h *Handler) Handle(c websock.Connection, r *http.Request) error {
+func (h *Handler) Handle(c websock.Connection, r *http.Request, attrs map[string][]rinq.Attr) error {
 	if h.Impl.Handle != nil {
-		return h.Impl.Handle(c, r)
+		return h.Impl.Handle(c, r, attrs)
 	}
 
 	return nil

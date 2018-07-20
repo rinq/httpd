@@ -84,7 +84,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 				<-start
 				handler := native.NewHandler(peer, message.JSONEncoding, twelf.DefaultLogger)
-				err := handler.Handle(websocket, httptest.NewRequest("GET", "/", nil))
+				err := handler.Handle(websocket, httptest.NewRequest("GET", "/", nil), make(map[string][]rinq.Attr))
 				log.Println("got", err.Error(), ", handler closed")
 			}()
 		})
@@ -358,7 +358,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 				<-start
 
-				err := subject.Handle(websocket, httptest.NewRequest("GET", "/", nil))
+				err := subject.Handle(websocket, httptest.NewRequest("GET", "/", nil), make(map[string][]rinq.Attr))
 				log.Println("got", err.Error(), ", handler closed")
 			}()
 		})

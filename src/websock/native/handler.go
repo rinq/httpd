@@ -44,14 +44,16 @@ func (h *Handler) Protocol() string {
 }
 
 // Handle takes control of WebSocket connection until it is closed.
-func (h *Handler) Handle(c websock.Connection, r *http.Request) error {
+func (h *Handler) Handle(c websock.Connection, r *http.Request, attrs map[string][]rinq.Attr) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	attrs[HttpdAttrNamespace] = sessionAttributes(r)
 
 	v := newVisitor(
 		ctx,
 		h.Peer,
-		sessionAttributes(r),
+		attrs,
 		func(m message.Outgoing) {
 			if w, err := c.NextWriter(); err == nil {
 				defer w.Close()

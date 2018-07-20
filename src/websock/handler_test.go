@@ -13,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/internal/mock"
+	"github.com/rinq/rinq-go/src/rinq"
 )
 
 var _ = Describe("httpHandler", func() {
@@ -44,12 +45,12 @@ var _ = Describe("httpHandler", func() {
 		})
 
 		It("dispatches based on sub-protocol", func() {
-			handlerA.Impl.Handle = func(Connection, *http.Request) error {
+			handlerA.Impl.Handle = func(Connection, *http.Request, map[string][]rinq.Attr) error {
 				panic("wrong handler")
 			}
 
 			barrier := make(chan bool, 1)
-			handlerB.Impl.Handle = func(Connection, *http.Request) error {
+			handlerB.Impl.Handle = func(Connection, *http.Request, map[string][]rinq.Attr) error {
 				barrier <- true
 				return nil
 			}
@@ -139,7 +140,7 @@ var _ = Describe("httpHandler", func() {
 			server, handle := startHTTPHander(PingInterval(pingTimeout))
 			defer server.Close()
 
-			handle.Impl.Handle = func(cn Connection, request *http.Request) error {
+			handle.Impl.Handle = func(cn Connection, req *http.Request, attr map[string][]rinq.Attr) error {
 				<-time.After(timeUntilRequest)
 
 				w, err := cn.NextWriter()
@@ -197,7 +198,7 @@ var _ = Describe("httpHandler", func() {
 
 			gotCapacityNotify, connNotify, cleanupNotify := make(chan bool, 10), make(chan struct{}), make(chan struct{})
 
-			handle.Impl.Handle = func(cn Connection, req *http.Request) error {
+			handle.Impl.Handle = func(cn Connection, req *http.Request, attr map[string][]rinq.Attr) error {
 
 				for i := 0; i < 10; i++ {
 					// queue up a bunch of "requests"
@@ -235,7 +236,7 @@ var _ = Describe("httpHandler", func() {
 
 			gotCapacityNotify, connNotify, cleanupNotify := make(chan bool, 10), make(chan bool, 2), make(chan struct{})
 
-			handle.Impl.Handle = func(cn Connection, req *http.Request) error {
+			handle.Impl.Handle = func(cn Connection, req *http.Request, attr map[string][]rinq.Attr) error {
 
 				for i := 0; i < 10; i++ {
 					// queue up a bunch of "requests"
@@ -276,7 +277,7 @@ var _ = Describe("httpHandler", func() {
 
 			ctx, cancelGreedy := context.WithCancel(context.Background())
 
-			greedyHandle.Impl.Handle = func(cn Connection, req *http.Request) error {
+			greedyHandle.Impl.Handle = func(cn Connection, req *http.Request, attr map[string][]rinq.Attr) error {
 				firstDone := make(chan struct{})
 				// queue two requests - a "long" running request and one that will block waiting and then cancel
 				go func() {
@@ -304,7 +305,7 @@ var _ = Describe("httpHandler", func() {
 
 			gotCapacityNotify := make(chan struct{})
 
-			starvedHandle.Impl.Handle = func(cn Connection, req *http.Request) error {
+			starvedHandle.Impl.Handle = func(cn Connection, req *http.Request, attr map[string][]rinq.Attr) error {
 
 				go func() {
 					cn.ReserveCapacity(context.Background())
@@ -345,7 +346,7 @@ var _ = Describe("httpHandler", func() {
 
 			reqNotify := make(chan struct{})
 
-			handle.Impl.Handle = func(_ Connection, _ *http.Request) error {
+			handle.Impl.Handle = func(_ Connection, _ *http.Request, _ map[string][]rinq.Attr) error {
 				close(reqNotify)
 				return nil
 			}
@@ -361,7 +362,7 @@ var _ = Describe("httpHandler", func() {
 			defaultHandle := &mock.Handler{}
 			reqNotify := make(chan struct{})
 
-			defaultHandle.Impl.Handle = func(_ Connection, _ *http.Request) error {
+			defaultHandle.Impl.Handle = func(_ Connection, _ *http.Request, _ map[string][]rinq.Attr) error {
 				close(reqNotify)
 				return nil
 			}
@@ -380,7 +381,7 @@ var _ = Describe("httpHandler", func() {
 			defaultHandle := &mock.Handler{}
 			reqNotify := make(chan struct{})
 
-			defaultHandle.Impl.Handle = func(_ Connection, _ *http.Request) error {
+			defaultHandle.Impl.Handle = func(_ Connection, _ *http.Request, _ map[string][]rinq.Attr) error {
 				close(reqNotify)
 				return nil
 			}

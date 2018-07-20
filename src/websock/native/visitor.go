@@ -15,7 +15,7 @@ import (
 type visitor struct {
 	context context.Context
 	peer    rinq.Peer
-	attrs   []rinq.Attr
+	attrs   map[string][]rinq.Attr
 	send    func(message.Outgoing)
 
 	mutex   sync.RWMutex
@@ -30,7 +30,7 @@ type visitor struct {
 func newVisitor(
 	context context.Context,
 	peer rinq.Peer,
-	attrs []rinq.Attr,
+	attrs map[string][]rinq.Attr,
 	send func(message.Outgoing),
 	policy websock.Capacity,
 ) *visitor {
@@ -159,7 +159,9 @@ func (v *visitor) newSession() (sess rinq.Session, err error) {
 		return
 	}
 
-	_, err = sess.CurrentRevision().Update(v.context, HttpdAttrNamespace, v.attrs...)
+	for ns, attrs := range v.attrs {
+		_, err = sess.CurrentRevision().Update(v.context, ns, attrs...)
+	}
 
 	return
 }
