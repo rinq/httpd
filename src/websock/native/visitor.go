@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
 	"github.com/rinq/rinq-go/src/rinq/ident"
@@ -14,7 +15,7 @@ import (
 type visitor struct {
 	context context.Context
 	peer    rinq.Peer
-	attrs   []rinq.Attr
+	attrs   map[string][]rinq.Attr
 	send    func(message.Outgoing)
 
 	mutex   sync.RWMutex
@@ -22,19 +23,23 @@ type visitor struct {
 	reverse map[ident.SessionID]message.SessionIndex
 
 	syncCallTimeout time.Duration
+
+	policy websock.Capacity
 }
 
 func newVisitor(
 	context context.Context,
 	peer rinq.Peer,
-	attrs []rinq.Attr,
+	attrs map[string][]rinq.Attr,
 	send func(message.Outgoing),
+	policy websock.Capacity,
 ) *visitor {
 	return &visitor{
 		context: context,
 		peer:    peer,
 		attrs:   attrs,
 		send:    send,
+		policy:  policy,
 	}
 }
 
@@ -154,7 +159,9 @@ func (v *visitor) newSession() (sess rinq.Session, err error) {
 		return
 	}
 
-	_, err = sess.CurrentRevision().Update(v.context, HttpdAttrNamespace, v.attrs...)
+	for ns, attrs := range v.attrs {
+		_, err = sess.CurrentRevision().Update(v.context, ns, attrs...)
+	}
 
 	return
 }
@@ -180,6 +187,11 @@ func (v *visitor) call(sess rinq.Session, m *message.SyncCall) {
 	timeout := v.capSyncCallTimeout(m.Timeout)
 	ctx, cancel := context.WithTimeout(v.context, timeout)
 	defer cancel()
+
+	if err := v.policy.ReserveCapacity(ctx); err != nil {
+		return
+	}
+	defer v.policy.ReleaseCapacity()
 
 	p, err := sess.Call(ctx, m.Namespace, m.Command, m.Payload)
 

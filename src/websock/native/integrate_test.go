@@ -6,9 +6,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
+	"github.com/jmalloc/twelf/src/twelf"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/rinq/httpd/src/websock"
 	"github.com/rinq/httpd/src/websock/native"
 	"github.com/rinq/httpd/src/websock/native/message"
 	"github.com/rinq/rinq-go/src/rinq"
@@ -80,8 +83,8 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 				defer GinkgoRecover()
 
 				<-start
-				handler := native.NewHandler(peer, message.JSONEncoding)
-				err := handler.Handle(websocket, httptest.NewRequest("GET", "/", nil))
+				handler := native.NewHandler(peer, message.JSONEncoding, twelf.DefaultLogger)
+				err := handler.Handle(websocket, httptest.NewRequest("GET", "/", nil), make(map[string][]rinq.Attr))
 				log.Println("got", err.Error(), ", handler closed")
 			}()
 		})
@@ -289,12 +292,39 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 				}
 			})
 		})
+
+		Context("and the server is nearing capacity", func() {
+			BeforeEach(func() {
+				peer.Listen(ns, func(ctx context.Context, req rinq.Request, res rinq.Response) {
+					defer req.Payload.Close()
+					res.Done(rinq.NewPayload(respBody))
+				})
+			})
+
+			It("blackholes any calls that fail to reserve capacity", func() {
+				// fail to acquire capacity in some way
+				websocket.capacityReservationResp = errors.New("boom")
+
+				websocket.clientCalls(createSession, session, nil, nil)
+				websocket.clientCalls(callSync, session, []interface{}{
+					seq, ns, cmd, time.Second,
+				}, "ping")
+
+				close(start)
+
+				select {
+				case <-websocket.serverResps:
+					Fail("Received a response to a request that should time out")
+				case <-time.After(time.Second / 4):
+				}
+			})
+		})
 	})
 
 	Context("when a timeout is set on the websocket", func() {
 
 		var (
-			subject *native.Handler
+			subject websock.Handler
 			ns      string
 
 			websocket *mockWebsock
@@ -328,7 +358,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 
 				<-start
 
-				err := subject.Handle(websocket, httptest.NewRequest("GET", "/", nil))
+				err := subject.Handle(websocket, httptest.NewRequest("GET", "/", nil), make(map[string][]rinq.Attr))
 				log.Println("got", err.Error(), ", handler closed")
 			}()
 		})
@@ -353,7 +383,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			clientTimeout := time.Duration(2000)
 			serverTimeout := 10 * time.Second
 
-			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
+			subject = native.NewHandler(peer, message.JSONEncoding, twelf.DebugLogger, native.MaxCallTimeout(serverTimeout))
 
 			websocket.clientCalls(createSession, session, nil, nil)
 			websocket.clientCalls(callSync, session, []interface{}{
@@ -381,7 +411,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			clientTimeout := time.Duration(10000)
 			serverTimeout := time.Duration(2000) * time.Millisecond
 
-			subject = native.NewHandler(peer, message.JSONEncoding, native.MaxCallTimeout(serverTimeout))
+			subject = native.NewHandler(peer, message.JSONEncoding, twelf.DebugLogger, native.MaxCallTimeout(serverTimeout))
 
 			websocket.clientCalls(createSession, session, nil, nil)
 			websocket.clientCalls(callSync, session, []interface{}{
@@ -408,7 +438,7 @@ var _ = Describe("the native Handlers' integration between rinq and websockets",
 			// client timeouts are in milliseconds
 			clientTimeout := time.Duration(10000)
 
-			subject = native.NewHandler(peer, message.JSONEncoding)
+			subject = native.NewHandler(peer, message.JSONEncoding, twelf.DebugLogger)
 
 			websocket.clientCalls(createSession, session, nil, nil)
 			websocket.clientCalls(callSync, session, []interface{}{
@@ -462,6 +492,16 @@ type mockWebsock struct {
 
 	clientReqs  []io.Reader
 	serverResps chan []byte
+
+	capacityReservationResp error
+}
+
+func (m *mockWebsock) ReserveCapacity(ctx context.Context) error {
+	return m.capacityReservationResp
+}
+
+func (m *mockWebsock) ReleaseCapacity() {
+
 }
 
 func (m *mockWebsock) clientCalls(msgType uint16, session uint16, headers interface{}, payload interface{}) {

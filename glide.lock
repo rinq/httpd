@@ -1,18 +1,22 @@
-hash: 4d8ce3c9b5cb138afaf9f3ff32fd3312d247edef6720f343480df69a862a73f5
-updated: 2018-06-18T12:44:32.512781+10:00
+hash: a323b5edaa628d69a061fd32f498262f0dc7c6b924af904db03cbe9ecfcb042d
+updated: 2018-06-27T12:38:43.200535+10:00
 imports:
 - name: github.com/alecthomas/units
   version: 2efee857e7cfd4f3d0138cc3cbb1b4966962b93a
 - name: github.com/golang/gddo
-  version: a154dc8b46f4e499724277f2ff2e9b41b959198d
+  version: 574849d519ec3acb591fc5620ee0aa3ea48081e0
   subpackages:
   - httputil/header
 - name: github.com/gorilla/websocket
   version: ea4d1f681babbce9545c9c5f3d5194a789c89f5b
 - name: github.com/hashicorp/go-version
   version: 23480c0665776210b5fbbac6eaaee40e3e6a96b7
+- name: github.com/jmalloc/twelf
+  version: 9f134de095cba6edc97910f8b38b313e354e6905
+  subpackages:
+  - src/twelf
 - name: github.com/onsi/ginkgo
-  version: c73579c58881b5ba90d3b08f6ac59cb1c909d6dd
+  version: 000d317071340972710dc1da9ae3c2c016a7a560
   subpackages:
   - config
   - extensions/table
@@ -33,7 +37,7 @@ imports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 41673fd8f03bf7bab82cf50741d447064926bb84
+  version: 9be84105672ba4433a3b61f1b4d7f9ff8b022293
   subpackages:
   - format
   - internal/assertion
@@ -81,7 +85,7 @@ imports:
 - name: github.com/streadway/amqp
   version: e5adc2ada8b8efff032bf61173a233d143e9318e
 - name: github.com/ugorji/go
-  version: f3cacc17c85ecb7f1b6a9e373ee85d1480919868
+  version: edc8f1f6bad21cca2dcbc2f4d4ced265111ccea6
   subpackages:
   - codec
 - name: golang.org/x/net
@@ -98,6 +102,10 @@ imports:
   - internal/timeseries
   - lex/httplex
   - trace
+- name: golang.org/x/sync
+  version: 1d60e4601c6fd243af51cc01ddf169918a5407ca
+  subpackages:
+  - semaphore
 testImports:
 - name: golang.org/x/sys
   version: 2320a9c15898af1b1b24f99700d5c1e957f9d8cf
