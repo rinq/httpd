@@ -11,6 +11,7 @@ import (
 type Handler struct {
 	Impl struct {
 		Protocol string
+		IsBinary bool
 		Handle   func(websock.Connection, *http.Request, map[string][]rinq.Attr) error
 	}
 }
@@ -18,6 +19,10 @@ type Handler struct {
 // Protocol returns h.Impl.Protocol
 func (h *Handler) Protocol() string {
 	return h.Impl.Protocol
+}
+
+func (h *Handler) IsBinary() bool {
+	return h.Impl.IsBinary
 }
 
 // Handle forwards to h.Impl.Handle

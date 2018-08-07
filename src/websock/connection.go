@@ -29,7 +29,9 @@ type Connection interface {
 }
 
 type connection struct {
-	socket       *websocket.Conn
+	socket      *websocket.Conn
+	messageType int
+
 	pingInterval time.Duration
 	closeReply   func(int, string) error
 
@@ -42,6 +44,7 @@ type connection struct {
 
 func newConn(
 	socket *websocket.Conn,
+	isBinary bool,
 	pingInterval time.Duration,
 	global, local *semaphore.Weighted) *connection {
 	c := &connection{
@@ -51,6 +54,12 @@ func newConn(
 		localCap:     local,
 
 		done: make(chan struct{}),
+	}
+
+	if isBinary {
+		c.messageType = websocket.BinaryMessage
+	} else {
+		c.messageType = websocket.TextMessage
 	}
 
 	socket.SetPongHandler(c.pong)
@@ -99,7 +108,7 @@ func (c *connection) NextReader() (io.Reader, error) {
 func (c *connection) NextWriter() (io.WriteCloser, error) {
 	c.mutex.Lock()
 
-	w, err := c.socket.NextWriter(websocket.BinaryMessage)
+	w, err := c.socket.NextWriter(c.messageType)
 	if err != nil {
 		c.mutex.Unlock()
 		return nil, err

@@ -19,6 +19,10 @@ type Handler interface {
 	// handler.
 	Protocol() string
 
+	// IsBinary returns whether or not the given Handler communicates
+	// using a binary protocol
+	IsBinary() bool
+
 	// Handle takes control of a WebSocket connection until it is closed.
 	// It takes a map of namespace to rinq.Attr to apply to any sessions
 	// created on this connection
@@ -103,7 +107,7 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	socket.SetReadLimit(int64(h.maxIncomingMsgSize))
 
 	connLimit := semaphore.NewWeighted(h.maxCallsPerConn)
-	conn := newConn(socket, h.pingInterval, h.globalLimit, connLimit)
+	conn := newConn(socket, wsh.IsBinary(), h.pingInterval, h.globalLimit, connLimit)
 
 	err = wsh.Handle(conn, r, make(map[string][]rinq.Attr))
 	if err != nil {

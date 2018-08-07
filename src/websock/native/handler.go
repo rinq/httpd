@@ -43,6 +43,12 @@ func (h *Handler) Protocol() string {
 	return protocolPrefix + h.Encoding.Name()
 }
 
+// IsBinary returns true, as native.Handler expects to be used in conjunction with a
+// websocket that supports a non-text based protocol
+func (h *Handler) IsBinary() bool {
+	return true
+}
+
 // Handle takes control of WebSocket connection until it is closed.
 func (h *Handler) Handle(c websock.Connection, r *http.Request, attrs map[string][]rinq.Attr) error {
 	ctx, cancel := context.WithCancel(context.Background())
